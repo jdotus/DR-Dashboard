@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jan 13, 2026 at 07:28 AM
+-- Generation Time: Jan 14, 2026 at 07:38 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `modified_drv2`
+-- Database: `final_dr`
 --
 
 -- --------------------------------------------------------
@@ -29,7 +29,7 @@ SET time_zone = "+00:00";
 
 CREATE TABLE `bnew_machine` (
   `id` int(11) NOT NULL,
-  `dr_number` int(11) NOT NULL,
+  `dr_number` varchar(250) NOT NULL,
   `unit_type` varchar(50) NOT NULL,
   `machine_model` varchar(150) NOT NULL,
   `serial_no` text DEFAULT NULL,
@@ -43,6 +43,7 @@ CREATE TABLE `bnew_machine` (
 --
 
 CREATE TABLE `dr_invoice` (
+  `id` int(11) NOT NULL,
   `unit_type` varchar(50) DEFAULT NULL,
   `dr_number` int(11) NOT NULL,
   `quantity` int(11) NOT NULL,
@@ -54,18 +55,6 @@ CREATE TABLE `dr_invoice` (
   `delivery_type` enum('partial','complete') DEFAULT 'complete',
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `dr_invoice`
---
-
-INSERT INTO `dr_invoice` (`unit_type`, `dr_number`, `quantity`, `item_description`, `machine_model`, `under_po_no`, `under_invoice_no`, `note`, `delivery_type`, `created_at`) VALUES
-('808080', 1000, 0, 'TONER', 'APV 5576', '656565', '', 'To be Completed', 'partial', '2026-01-08 08:51:55'),
-('808080', 50, 0, 'TONER', 'APV 5576', '656565', '', 'To be Completed', 'partial', '2026-01-08 08:51:55'),
-('PCS', 808080, 1000, 'TONER', 'APV 5576', '656565', '', 'To be Completed', 'partial', '2026-01-08 08:55:53'),
-('PCS', 808080, 50, 'TONER', 'APV 5576', '656565', '', 'To be Completed', 'partial', '2026-01-08 08:55:53'),
-('PCS', 808080, 1000, 'TONER', 'APV 5576', '656565', '656565', 'To be Completed', 'complete', '2026-01-08 09:19:47'),
-('PCS', 808080, 50, 'TONER', 'APV 5576', '656565', '656565', 'To be Completed', 'complete', '2026-01-08 09:19:47');
 
 -- --------------------------------------------------------
 
@@ -193,6 +182,12 @@ ALTER TABLE `bnew_machine`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `dr_invoice`
+--
+ALTER TABLE `dr_invoice`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `dr_with_price`
 --
 ALTER TABLE `dr_with_price`
@@ -236,7 +231,13 @@ ALTER TABLE `used_machine`
 -- AUTO_INCREMENT for table `bnew_machine`
 --
 ALTER TABLE `bnew_machine`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+
+--
+-- AUTO_INCREMENT for table `dr_invoice`
+--
+ALTER TABLE `dr_invoice`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `dr_with_price`
@@ -248,7 +249,7 @@ ALTER TABLE `dr_with_price`
 -- AUTO_INCREMENT for table `main`
 --
 ALTER TABLE `main`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
 
 --
 -- AUTO_INCREMENT for table `pullout_machine`
