@@ -3,7 +3,7 @@
 $host = 'localhost';
 $username = 'root';
 $password = '';
-$database = 'modified_drv2';
+$database = 'Final_DR';
 
 // Create connection
 $conn = new mysqli($host, $username, $password, $database);
@@ -473,16 +473,6 @@ $bnew_count = $result_bnew->fetch_assoc()['count'];
                                         </td>
                                     </tr>
                                 <?php endwhile; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="9" style="text-align: center; padding: 40px;">
-                                        <div class="empty-state">
-                                            <i class="fas fa-file-alt"></i>
-                                            <h3>No invoices found</h3>
-                                            <p>No invoices have been added yet</p>
-                                        </div>
-                                    </td>
-                                </tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
