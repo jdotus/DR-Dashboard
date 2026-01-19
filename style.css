@@ -213,18 +213,26 @@ body {
     background-color: #f8fafc;
 }
 
-/* ACTION BUTTONS - SIMPLE TEXT BUTTONS ALTERNATIVE */
+/* ACTION BUTTONS - OPTIMIZED */
 .action-buttons {
-    display: flex;
-    gap: 11px;
-    justify-content: center;
+    display: flex !important;
+    gap: 8px;
     align-items: center;
+    justify-content: center;
+    min-width: 200px;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative;
+    z-index: 100;
 }
 
-/* Simple text buttons without icons */
 .btn-action {
-    padding: 6px 12px;
-    border: none;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 8px 12px !important;
+    border: 1px solid #bae6fd !important;
     border-radius: 6px;
     cursor: pointer;
     font-size: 12px;
@@ -232,42 +240,32 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     transition: all 0.2s ease;
-    /* min-width: 60px; */
-    text-align: center;
+    background-color: #e0f2fe !important;
+    color: #0369a1 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    white-space: nowrap;
+    height: 34px;
+    min-width: 70px;
 }
 
-.btn-view {
-    background-color: #e0f2fe;
-    color: #0369a1;
-    border: 1px solid #bae6fd;
-}
-
-.btn-view:hover {
-    background-color: #bae6fd;
-    transform: translateY(-2px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.btn-action i {
+    font-size: 11px;
 }
 
 .btn-edit {
-    background-color: #f0f9ff;
-    color: #0ea5e9;
-    border: 1px solid #e0f2fe;
+    background-color: #f0f9ff !important;
+    color: #0ea5e9 !important;
+    border: 1px solid #e0f2fe !important;
 }
 
-.btn-edit:hover {
-    background-color: #e0f2fe;
-    transform: translateY(-2px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.btn-print {
+    background-color: #f0f9ff !important;
+    color: #0ea5e9 !important;
+    border: 1px solid #e0f2fe !important;
 }
 
-.btn-delete {
-    background-color: #fee2e2;
-    color: #dc2626;
-    border: 1px solid #fecaca;
-}
-
-.btn-delete:hover {
-    background-color: #fecaca;
+.btn-action:hover {
     transform: translateY(-2px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -420,7 +418,7 @@ body {
 
 /* Modal Styles */
 .modal {
-    display: none;
+    display: none !important;
     position: fixed;
     top: 0;
     left: 0;
@@ -436,9 +434,9 @@ body {
 }
 
 .modal.show {
-    display: flex;
-    opacity: 1;
-    visibility: visible;
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 .modal-content {
@@ -451,6 +449,8 @@ body {
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
     transform: translateY(-20px);
     transition: transform 0.3s ease;
+    position: relative;
+    z-index: 1001;
 }
 
 .modal.show .modal-content {
@@ -730,7 +730,7 @@ body {
     .action-buttons {
         flex-direction: column;
         align-items: stretch;
-        gap: 1px;
+        gap: 5px;
     }
     
     .btn-action {
@@ -874,7 +874,7 @@ body {
     
     .action-buttons {
         flex-direction: row;
-        gap: 1px;
+        gap: 5px;
     }
     
     .btn-action {
@@ -898,7 +898,7 @@ body {
     
     .action-buttons {
         flex-direction: column;
-        gap: 1px;
+        gap: 5px;
     }
     
     .btn-action {
@@ -906,98 +906,4 @@ body {
         font-size: 10px;
         min-width: 45px;
     }
-}
-
-/* Ensure table rows are properly aligned */
-.invoices-table tr {
-    display: table-row;
-}
-
-.invoices-table td,
-.invoices-table th {
-    display: table-cell;
-}
-
-/* CRITICAL FIX: Force action buttons to be visible */
-.action-buttons {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-.btn-action {
-    display: inline-block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    cursor: pointer !important;
-}
-
-/* Backup option: Use Unicode symbols as text if needed */
-/* .btn-action-text::before {
-    content: "📁"; 
-}
-
-.btn-edit-text::before {
-    content: "✏️";
-} */
-
-/* Add this to your CSS file */
-.action-buttons {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-.btn-action {
-    display: inline-block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-/* Ensure table rows display properly when shown */
-.invoices-table tr[style*="display: ''"] {
-    display: table-row !important;
-}
-
-.invoices-table tr[style*="display: none"] {
-    display: none !important;
-}
-
-/* Add these styles to fix button visibility */
-.btn-action {
-    display: inline-block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    position: relative !important;
-    z-index: 1 !important;
-}
-
-.action-buttons {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    position: relative !important;
-    z-index: 1 !important;
-}
-
-/* Ensure table rows display properly */
-.invoices-table tr {
-    display: table-row !important;
-}
-
-.invoices-table tr[style*="display: none"] {
-    display: none !important;
-}
-
-.invoices-table tr[style*="display: table-row"] {
-    display: table-row !important;
-}
-
-/* Make sure action column is always visible */
-.invoices-table td:last-child {
-    background-color: white !important;
-    border-left: 2px solid #e2e8f0 !important;
-    position: sticky !important;
-    right: 0 !important;
-    z-index: 10 !important;
 }

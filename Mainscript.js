@@ -24,19 +24,29 @@ function debounce(func, wait) {
     };
 }
 
-// Initialize when page loads
+// Single initialization on page load
+let initialized = false;
 document.addEventListener('DOMContentLoaded', function() {
+    if (initialized) return;
+    initialized = true;
+    
     initializeTable();
     setupPagination();
     checkAndShowModals();
+    setupModalEventListeners();
+    setupButtonVisibility();
     
     // Add debounced search for better performance
     const debouncedSearch = debounce(searchInvoices, 300);
     searchInput.addEventListener('input', debouncedSearch);
+    
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', checkAndShowModals);
 });
 
 function initializeTable() {
     const rows = invoicesTableBody.querySelectorAll('tr');
+    const invoiceMap = new Map();
     
     allInvoices = Array.from(rows).map((row, index) => {
         const cells = row.querySelectorAll('td');
@@ -44,21 +54,17 @@ function initializeTable() {
         // Skip empty rows or rows with insufficient cells
         if (cells.length === 0 || cells.length < 9) return null;
         
-        // Get ID from data attribute first, then from onclick
-        let invoiceId = row.querySelector('.btn-view')?.dataset?.id || null;
+        // Get ID from data attribute on btn-view
+        const viewButton = row.querySelector('.btn-view');
+        const invoiceId = viewButton?.dataset?.id || 
+                         (viewButton?.getAttribute('onclick')?.match(/\d+/)?.[0] || null);
         
-        if (!invoiceId) {
-            const viewButton = row.querySelector('.btn-view');
-            if (viewButton?.getAttribute('onclick')) {
-                const match = viewButton.getAttribute('onclick').match(/\d+/);
-                invoiceId = match ? match[0] : null;
-            }
-        }
+        if (!invoiceId) return null;
         
         // Store reference to each cell for faster access
         const cellTexts = Array.from(cells).slice(0, 8).map(cell => cell.textContent.trim());
         
-        return {
+        const invoice = {
             id: invoiceId,
             index: index,
             si_number: cellTexts[0],
@@ -70,8 +76,12 @@ function initializeTable() {
             particulars: cellTexts[6],
             si_date: cellTexts[7],
             rowElement: row,
-            searchableText: cellTexts.join(' ').toLowerCase() // For faster searching
+            searchableText: cellTexts.join(' ').toLowerCase(),
+            actionContainer: row.querySelector('.action-buttons') // Cache button container
         };
+        
+        invoiceMap.set(invoice, true); // For O(1) lookup
+        return invoice;
     }).filter(invoice => invoice !== null && invoice.id !== null);
     
     filteredInvoices = [...allInvoices];
@@ -118,12 +128,23 @@ function displayPage(page) {
     
     // Show/hide rows efficiently
     allInvoices.forEach(invoice => {
-        const isVisible = filteredInvoices.includes(invoice) && pageInvoicesSet.has(invoice);
-        invoice.rowElement.style.display = isVisible ? 'table-row' : 'none';
+        const isVisible = pageInvoicesSet.has(invoice);
+        const display = isVisible ? 'table-row' : 'none';
         
-        // Only ensure buttons are visible for visible rows
-        if (isVisible) {
-            ensureActionButtonsVisible(invoice.rowElement);
+        if (invoice.rowElement.style.display !== display) {
+            invoice.rowElement.style.display = display;
+        }
+        
+        // Ensure buttons and container are visible for visible rows
+        if (isVisible && invoice.actionContainer) {
+            // Set container styles
+            invoice.actionContainer.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important; gap: 8px; align-items: center; justify-content: center; min-width: 200px;';
+            
+            // Set individual button styles
+            const buttons = invoice.actionContainer.querySelectorAll('.btn-action');
+            buttons.forEach(btn => {
+                btn.style.cssText = 'display: inline-flex !important; visibility: visible !important; opacity: 1 !important; align-items: center; justify-content: center; padding: 8px 12px; height: 34px; min-width: 70px; white-space: nowrap;';
+            });
         }
     });
     
@@ -316,6 +337,40 @@ function goToLastPage() {
 }
 
 // Optimized highlight search term
+// function highlightSearchTerm() {
+//     const searchTerm = searchInput.value.toLowerCase().trim();
+    
+//     if (searchTerm === '') {
+//         // Remove highlights from all visible rows
+//         allInvoices.forEach(invoice => {
+//             if (invoice.rowElement.style.display !== 'none') {
+//                 const cells = invoice.rowElement.querySelectorAll('td');
+//                 cells.forEach(cell => {
+//                     if (cell.innerHTML !== cell.textContent) {
+//                         cell.innerHTML = cell.textContent;
+//                     }
+//                 });
+//             }
+//         });
+//         return;
+//     }
+    
+//     const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+    
+//     // Only highlight filtered invoices (much faster than checking all)
+//     filteredInvoices.forEach(invoice => {
+//         const cells = invoice.rowElement.querySelectorAll('td');
+//         cells.forEach(cell => {
+//             const originalText = cell.textContent;
+//             if (originalText.toLowerCase().includes(searchTerm)) {
+//                 cell.innerHTML = originalText.replace(regex, '<span class="highlight">$1</span>');
+//             } else if (cell.innerHTML !== originalText) {
+//                 cell.innerHTML = originalText;
+//             }
+//         });
+//     });
+// }
+// Optimized highlight search term
 function highlightSearchTerm() {
     const searchTerm = searchInput.value.toLowerCase().trim();
     
@@ -325,7 +380,8 @@ function highlightSearchTerm() {
             if (invoice.rowElement.style.display !== 'none') {
                 const cells = invoice.rowElement.querySelectorAll('td');
                 cells.forEach(cell => {
-                    if (cell.innerHTML !== cell.textContent) {
+                    // Skip the action cell - don't modify it
+                    if (!cell.classList.contains('action-cell') && cell.innerHTML !== cell.textContent) {
                         cell.innerHTML = cell.textContent;
                     }
                 });
@@ -336,21 +392,25 @@ function highlightSearchTerm() {
     
     const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
     
-    // Only highlight visible rows
-    allInvoices.forEach(invoice => {
-        if (invoice.rowElement.style.display !== 'none') {
-            const cells = invoice.rowElement.querySelectorAll('td');
-            cells.forEach(cell => {
-                const originalText = cell.textContent;
-                if (originalText.toLowerCase().includes(searchTerm)) {
-                    cell.innerHTML = originalText.replace(regex, '<span class="highlight">$1</span>');
-                } else if (cell.innerHTML !== originalText) {
-                    cell.innerHTML = originalText;
-                }
-            });
-        }
+    // Only highlight filtered invoices (much faster than checking all)
+    filteredInvoices.forEach(invoice => {
+        const cells = invoice.rowElement.querySelectorAll('td');
+        cells.forEach(cell => {
+            // Skip the action cell - don't modify it
+            if (cell.classList.contains('action-cell')) {
+                return;
+            }
+            
+            const originalText = cell.textContent;
+            if (originalText.toLowerCase().includes(searchTerm)) {
+                cell.innerHTML = originalText.replace(regex, '<span class="highlight">$1</span>');
+            } else if (cell.innerHTML !== originalText) {
+                cell.innerHTML = originalText;
+            }
+        });
     });
 }
+
 
 // Utility function to escape regex special characters
 function escapeRegExp(string) {
@@ -369,107 +429,110 @@ function editInvoice(id) {
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
+        // Remove the show class
+        modal.classList.remove('show');
         modal.style.display = 'none';
+        
         // Remove URL parameters when closing modal
         const url = new URL(window.location);
         url.searchParams.delete('view');
         url.searchParams.delete('edit');
         window.history.replaceState({}, '', url);
+        
+        // Restore body scrolling
+        document.body.style.overflow = '';
     }
 }
 
-// Check and show modals
-function checkAndShowModals() {
-    const urlParams = new URLSearchParams(window.location.search);
-
-    if (urlParams.has('view')) {
-        const viewModal = document.getElementById('viewInvoiceModal');
-        if (viewModal) {
-            viewModal.classList.add('show');
-            // Prevent body scrolling when modal is open
-            document.body.style.overflow = 'hidden';
+// Setup modal event listeners (called once during initialization)
+function setupModalEventListeners() {
+    // Use event delegation to avoid multiple listeners
+    document.addEventListener('click', function(e) {
+        // Close modal when clicking outside (on the modal backdrop)
+        if (e.target.classList.contains('modal')) {
+            closeModal(e.target.id);
         }
-    }
-
-    if (urlParams.has('edit')) {
-        const editModal = document.getElementById('editInvoiceModal');
-        if (editModal) {
-            editModal.classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-    }
-
-    // Close modal when clicking outside
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeModal(this.id);
-                document.body.style.overflow = '';
-            }
-        });
         
-        // Restore body scrolling when modal is closed via close button
-        const closeBtn = modal.querySelector('.modal-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                document.body.style.overflow = '';
-            });
+        // Close modal with close button
+        if (e.target.closest('.modal-close')) {
+            const modal = e.target.closest('.modal');
+            if (modal) {
+                closeModal(modal.id);
+            }
         }
-    });
-
+    }, true); // Use capture phase for better event handling
+    
     // Close modal with Escape key
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             const modals = document.querySelectorAll('.modal.show');
             modals.forEach(modal => {
                 closeModal(modal.id);
-                document.body.style.overflow = '';
             });
         }
     });
 }
 
-// Ensure action buttons are visible
+// Check and show modals
+function checkAndShowModals() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewModal = document.getElementById('viewInvoiceModal');
+    const editModal = document.getElementById('editInvoiceModal');
+
+    // Handle view modal
+    if (urlParams.has('view')) {
+        if (viewModal) {
+            viewModal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+    } else if (viewModal) {
+        viewModal.classList.remove('show');
+    }
+
+    // Handle edit modal
+    if (urlParams.has('edit')) {
+        if (editModal) {
+            editModal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+    } else if (editModal) {
+        editModal.classList.remove('show');
+    }
+}
+
+// Setup button visibility (called once during initialization)
+function setupButtonVisibility() {
+    // Ensure buttons are visible on page load
+    allInvoices.forEach(invoice => {
+        if (invoice.actionContainer) {
+            invoice.actionContainer.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important; gap: 8px; align-items: center; justify-content: center; min-width: 200px;';
+            
+            // Set individual button styles
+            const buttons = invoice.actionContainer.querySelectorAll('.btn-action');
+            buttons.forEach(btn => {
+                btn.style.cssText = 'display: inline-flex !important; visibility: visible !important; opacity: 1 !important; align-items: center; justify-content: center; padding: 8px 12px; height: 34px; min-width: 70px; white-space: nowrap;';
+            });
+        }
+    });
+    
+    // Set display property for all action buttons
+    document.querySelectorAll('.btn-action').forEach(button => {
+        button.style.cssText = 'display: inline-flex !important; visibility: visible !important; opacity: 1;';
+    });
+}
+
+// Ensure action buttons are visible (lightweight, cached reference)
 function ensureActionButtonsVisible(row) {
     if (!row) return;
     
-    const actionButtons = row.querySelectorAll('.btn-action');
-    actionButtons.forEach(button => {
-        button.style.display = 'inline-block';
-        button.style.visibility = 'visible';
-    });
-}
-
-// Initialize button visibility
-document.addEventListener('DOMContentLoaded', function() {
-    // Ensure buttons are visible on page load
-    setTimeout(() => {
-        document.querySelectorAll('.btn-action').forEach(button => {
-            button.style.display = 'inline-block';
-            button.style.visibility = 'visible';
+    const actionButtonsContainer = row.querySelector('.action-buttons');
+    if (actionButtonsContainer) {
+        actionButtonsContainer.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important; gap: 8px; align-items: center; justify-content: center; min-width: 200px;';
+        
+        // Ensure individual buttons are styled
+        const buttons = actionButtonsContainer.querySelectorAll('.btn-action');
+        buttons.forEach(btn => {
+            btn.style.cssText = 'display: inline-flex !important; visibility: visible !important; opacity: 1 !important; align-items: center; justify-content: center; padding: 8px 12px; height: 34px; min-width: 70px; white-space: nowrap;';
         });
-    }, 100);
-    
-    // Handle browser back/forward buttons
-    window.addEventListener('popstate', function() {
-        checkAndShowModals();
-    });
-});
-
-// Add this to your CSS for better modal scrolling
-// Add this at the end of your CSS file:
-/*
-.modal.show {
-    display: flex !important;
-    overflow-y: auto;
+    }
 }
-
-.modal-content {
-    max-height: calc(100vh - 100px);
-    margin: 50px auto;
-}
-
-body.modal-open {
-    overflow: hidden;
-}
-*/
