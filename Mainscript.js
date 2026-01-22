@@ -13,7 +13,6 @@ let totalRowsElement;
 // MODAL FUNCTIONS - MUST BE IN GLOBAL SCOPE
 // ============================================
 
-// View invoice function
 // Edit invoice function
 function editInvoice(id) {
     console.log('Edit invoice clicked with ID:', id);
@@ -28,28 +27,7 @@ function viewInvoice(id) {
     window.location.href = '?view=' + id;
 }
 
-// Close modal function
-// function closeModal() {
-//     console.log('Closing modal');
-    
-//     // Hide all modals
-//     const modals = document.querySelectorAll('.modal');
-//     modals.forEach(modal => {
-//         modal.classList.remove('show');
-//         modal.style.display = 'none';
-//     });
-    
-//     // Remove body class
-//     document.body.classList.remove('modal-open');
-    
-//     // Remove URL parameters without reloading page
-//     const url = new URL(window.location);
-//     url.searchParams.delete('view');
-//     url.searchParams.delete('edit');
-//     window.history.replaceState({}, '', url);
-// }
-
-// Close modal function - FIXED
+// Close modal function - UPDATED with URL cleanup
 function closeModal(modalId) {
     console.log('Closing modal:', modalId);
     
@@ -71,15 +49,31 @@ function closeModal(modalId) {
     
     // Remove body class
     document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
     
     // Remove URL parameters without reloading page
-    // const url = new URL(window.location);
-    // url.searchParams.delete('view');
-    // url.searchParams.delete('edit');
-    // window.history.replaceState({}, '', url);
+    cleanURL();
 }
 
-// Show modal function
+// Clean URL function - removes ?edit and ?view parameters
+function cleanURL() {
+    const currentURL = new URL(window.location);
+    const hasEditParam = currentURL.searchParams.has('edit');
+    const hasViewParam = currentURL.searchParams.has('view');
+    
+    if (hasEditParam || hasViewParam) {
+        // Remove the parameters
+        currentURL.searchParams.delete('edit');
+        currentURL.searchParams.delete('view');
+        
+        // Update URL without reloading page
+        window.history.replaceState({}, '', currentURL.toString());
+        
+        console.log('URL cleaned:', window.location.href);
+    }
+}
+
+// Show modal function - UPDATED with URL update
 function showModal(modalId) {
     console.log('showModal called for:', modalId);
     
@@ -101,11 +95,9 @@ function showModal(modalId) {
             
             console.log(modalId + ' shown successfully');
             
-            // Debug: Log modal classes and styles
-            console.log('Modal classes:', modal.className);
-            console.log('Modal display:', modal.style.display);
-            console.log('Modal opacity:', modal.style.opacity);
-            console.log('Modal visibility:', modal.style.visibility);
+            // Update URL to reflect modal state (optional)
+            updateURLForModal(modalId);
+            
         } else {
             console.error(modalId + ' element NOT FOUND in DOM');
             
@@ -117,6 +109,30 @@ function showModal(modalId) {
             });
         }
     }, 50);
+}
+
+// Update URL for modal state (optional - for browser history)
+function updateURLForModal(modalId) {
+    const currentURL = new URL(window.location);
+    const modal = document.getElementById(modalId);
+    
+    if (modalId === 'editInvoiceModal') {
+        const editId = modal?.querySelector('input[name="id"]')?.value;
+        if (editId) {
+            currentURL.searchParams.set('edit', editId);
+            currentURL.searchParams.delete('view');
+            window.history.replaceState({}, '', currentURL.toString());
+        }
+    } else if (modalId === 'viewInvoiceModal') {
+        // Extract ID from the modal content
+        const detailElement = modal?.querySelector('.detail-value');
+        const drNumber = detailElement?.textContent?.trim();
+        if (drNumber) {
+            currentURL.searchParams.set('view', drNumber);
+            currentURL.searchParams.delete('edit');
+            window.history.replaceState({}, '', currentURL.toString());
+        }
+    }
 }
 
 // Single initialization on page load
@@ -140,10 +156,9 @@ document.addEventListener('DOMContentLoaded', function() {
     setupButtonVisibility();
     
     // Check URL parameters and show modals on page load
-    // CRITICAL: Use setTimeout to ensure DOM is fully loaded
     setTimeout(function() {
         checkAndShowModalsFromURL();
-    }, 200); // Increased timeout for slower connections
+    }, 200);
     
     // Add search functionality
     searchInput.addEventListener('input', function() {
@@ -153,6 +168,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle browser back/forward buttons
     window.addEventListener('popstate', function() {
         setTimeout(checkAndShowModalsFromURL, 100);
+    });
+    
+    // Add URL cleanup when page loads with modal parameters
+    // This ensures if user refreshes page with modal open, it stays clean
+    window.addEventListener('load', function() {
+        // Small delay to ensure everything is loaded
+        setTimeout(() => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const hasModalParams = urlParams.has('edit') || urlParams.has('view');
+            
+            // If no modals are shown but URL has parameters, clean it
+            if (hasModalParams) {
+                const modals = document.querySelectorAll('.modal');
+                const anyModalVisible = Array.from(modals).some(modal => 
+                    modal.style.display === 'flex' || 
+                    modal.style.display === 'block' ||
+                    modal.classList.contains('show')
+                );
+                
+                if (!anyModalVisible) {
+                    cleanURL();
+                }
+            }
+        }, 500);
     });
     
     console.log('Initialization complete');
@@ -469,34 +508,6 @@ function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// ============================================
-// FIXED MODAL FUNCTIONS WITH DEBUGGING
-// ============================================
-
-// function setupModalEventListeners() {
-//     console.log('Setting up modal event listeners');
-    
-//     // Close modal when clicking outside
-//     document.addEventListener('click', function(e) {
-//         if (e.target.classList.contains('modal')) {
-//             closeModal();
-//         }
-        
-//         // Close modal when clicking X button
-//         if (e.target.classList.contains('modal-close') || e.target.closest('.modal-close')) {
-//             e.preventDefault();
-//             closeModal();
-//         }
-//     });
-    
-//     // Close modal with ESC key
-//     document.addEventListener('keydown', function(e) {
-//         if (e.key === 'Escape') {
-//             closeModal();
-//         }
-//     });
-// }
-
 function setupModalEventListeners() {
     console.log('Setting up modal event listeners');
     
@@ -548,6 +559,8 @@ function checkAndShowModalsFromURL() {
         showModal('viewInvoiceModal');
     } else if (viewId && !viewModal) {
         console.error('View modal not found in DOM even though viewId exists');
+        // Clean URL since modal doesn't exist
+        cleanURL();
     }
     
     if (editId && editModal) {
@@ -555,14 +568,8 @@ function checkAndShowModalsFromURL() {
         showModal('editInvoiceModal');
     } else if (editId && !editModal) {
         console.error('Edit modal not found in DOM even though editId exists');
-        
-        // Try to debug why edit modal doesn't exist
-        // Check if PHP rendered the edit modal
-        const allModals = document.querySelectorAll('.modal');
-        console.log('Total modals in DOM:', allModals.length);
-        
-        // Check if edit invoice data exists
-        console.log('Checking if edit_invoice PHP variable exists...');
+        // Clean URL since modal doesn't exist
+        cleanURL();
     }
 }
 

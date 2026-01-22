@@ -1564,10 +1564,6 @@ $stmt_bnew->close();
             </div>
         <?php endif; ?>
     <?php endif; ?>
-
-    <!-- <script src="Mainscript.js"></script> -->
-    <!-- <script src="./Mainscript.js"></script> -->
-
 </body>
 
 </html>
