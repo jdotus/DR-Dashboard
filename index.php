@@ -697,6 +697,7 @@ $stmt_bnew->close();
     <title>Recent Invoices Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="style.css">
+    <script src="./Mainscript.js"></script>
 </head>
 
 <body>
@@ -798,766 +799,774 @@ $stmt_bnew->close();
     </div>
 
     <!-- Edit Invoice Modal - DYNAMIC VERSION -->
-    <?php if ($edit_invoice): ?>
-        <div class="modal" id="editInvoiceModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Edit Invoice - <?php echo strtoupper($edit_invoice['type']); ?></h3>
-                    <!-- In Edit Modal -->
-                    <!-- <button class="modal-close" onclick="closeModal('editInvoiceModal')">&times;</button> -->
-                    <button type="button" class="modal-close" onclick="closeModal('editInvoiceModal')">&times;</button>
+    <!-- Edit Invoice Modal - FIXED VERSION -->
+    <?php if ($edit_id > 0): ?>
+        <?php if ($edit_invoice): ?>
+            <div class="modal" id="editInvoiceModal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Edit Invoice - <?php echo strtoupper($edit_invoice['type']); ?></h3>
+                        <button type="button" class="modal-close" onclick="closeModal('editInvoiceModal')">&times;</button>
+                    </div>
+                    <form method="POST" action="">
+                        <div class="modal-body">
+
+                            <!-- Main Details Section -->
+                            <div class="section-header">
+                                <h4><i class="fas fa-info-circle"></i> Main Details</h4>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="si_number">SI Number *</label>
+                                    <input type="text" name="si_number" class="form-control" value="<?php echo htmlspecialchars($edit_invoice['si_number']); ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="dr_number">DR Number *</label>
+                                    <input type="text" name="dr_number" class="form-control" value="<?php echo htmlspecialchars($edit_invoice['dr_number']); ?>" required readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="delivered_to">Delivered To *</label>
+                                <input type="text" name="delivered_to" class="form-control" value="<?php echo htmlspecialchars($edit_invoice['delivered_to']); ?>" required>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="tin">TIN *</label>
+                                    <input type="text" name="tin" class="form-control" value="<?php echo htmlspecialchars($edit_invoice['tin']); ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="si_date">SI Date *</label>
+                                    <input type="date" name="si_date" class="form-control" value="<?php echo $edit_invoice['si_date']; ?>" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="address">Address *</label>
+                                <textarea name="address" class="form-control" rows="2" required><?php echo htmlspecialchars($edit_invoice['address']); ?></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="terms">Terms *</label>
+                                <input type="text" name="terms" class="form-control" value="<?php echo htmlspecialchars($edit_invoice['terms']); ?>" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="particulars">Particulars</label>
+                                <textarea name="particulars" class="form-control" rows="3"><?php echo htmlspecialchars($edit_invoice['particulars']); ?></textarea>
+                            </div>
+
+                            <!-- Dynamic Sections Based on Invoice Type -->
+                            <?php if ($edit_invoice['type'] == 'bnew' && !empty($bnew_machines)): ?>
+                                <div class="section-header">
+                                    <h4><i class="fas fa-robot"></i> Brand New Machines</h4>
+                                </div>
+                                <div id="bnew-section">
+                                    <?php foreach ($bnew_machines as $index => $machine): ?>
+                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label>Unit Type</label>
+                                                    <input type="text" name="bnew_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($machine['unit_type']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Machine Model</label>
+                                                    <input type="text" name="bnew_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Serial No.</label>
+                                                    <input type="text" name="bnew_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+
+                            <?php endif; ?>
+
+                            <?php if ($edit_invoice['type'] == 'usedmachine' && !empty($used_machines)): ?>
+                                <div class="section-header">
+                                    <h4><i class="fas fa-cogs"></i> Used Machines</h4>
+                                </div>
+                                <div id="used-section">
+                                    <?php foreach ($used_machines as $index => $machine): ?>
+                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label>Unit Type</label>
+                                                    <input type="text" name="used_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($machine['unit_type']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Machine Model</label>
+                                                    <input type="text" name="used_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Serial No.</label>
+                                                    <input type="text" name="used_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>MR Start</label>
+                                                    <input type="text" name="used_mr_start[]" class="form-control" value="<?php echo htmlspecialchars($machine['mr_start']); ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Impression</label>
+                                                    <input type="text" name="used_color_imp[]" class="form-control" value="<?php echo htmlspecialchars($machine['color_impression']); ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Black Impression</label>
+                                                    <input type="text" name="used_black_imp[]" class="form-control" value="<?php echo htmlspecialchars($machine['black_impression']); ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Large Impression</label>
+                                                    <input type="text" name="used_color_large_imp[]" class="form-control" value="<?php echo htmlspecialchars($machine['color_large_impression']); ?>" oninput="formatPrice(this)">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+
+                            <?php endif; ?>
+
+                            <?php if ($edit_invoice['type'] == 'replacementmachine' && !empty($replacement_machines)): ?>
+                                <div class="section-header">
+                                    <h4><i class="fas fa-exchange-alt"></i> Replacement Machines</h4>
+                                </div>
+                                <div id="replacement-section">
+                                    <?php foreach ($replacement_machines as $index => $machine): ?>
+                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label>Unit Type</label>
+                                                    <input type="text" name="replace_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($machine['unit_type']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Machine Model</label>
+                                                    <input type="text" name="replace_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Serial No.</label>
+                                                    <input type="text" name="replace_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>MR Start</label>
+                                                    <input type="text" name="replace_mr_start[]" class="form-control" value="<?php echo number_format($machine['mr_start']); ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Impression</label>
+                                                    <input type="text" name="replace_color_imp[]" class="form-control" value="<?php echo number_format($machine['color_impression']); ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Black Impression</label>
+                                                    <input type="text" name="replace_black_imp[]" class="form-control" value="<?php echo number_format($machine['black_impression']); ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Large Impression</label>
+                                                    <input type="text" name="replace_color_large_imp[]" class="form-control" value="<?php echo number_format($machine['color_large_impression']); ?>" oninput="formatPrice(this)">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+
+                            <?php endif; ?>
+
+                            <?php if ($edit_invoice['type'] == 'drinvoice' && !empty($dr_invoices)): ?>
+                                <div class="section-header">
+                                    <h4><i class="fas fa-file-invoice"></i> DR Invoice Items</h4>
+                                </div>
+                                <div class="form-group">
+                                    <label>Delivery Type</label>
+                                    <select name="delivery_type" class="form-control">
+                                        <option value="partial" <?php echo (isset($dr_invoices[0]['delivery_type']) && $dr_invoices[0]['delivery_type'] == 'partial') ? 'selected' : ''; ?>>Partial</option>
+                                        <option value="complete" <?php echo (isset($dr_invoices[0]['delivery_type']) && $dr_invoices[0]['delivery_type'] == 'complete') ? 'selected' : ''; ?>>Complete</option>
+                                    </select>
+                                </div>
+                                <div id="invoice-section">
+                                    <?php foreach ($dr_invoices as $index => $invoice): ?>
+                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label>Machine Model</label>
+                                                    <input type="text" name="invoice_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($invoice['machine_model']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Under P.O No.</label>
+                                                    <input type="text" name="invoice_under_po_no[]" class="form-control" value="<?php echo htmlspecialchars($invoice['under_po_no']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Under Invoice No.</label>
+                                                    <input type="text" name="invoice_under_invoice_no[]" class="form-control" value="<?php echo htmlspecialchars($invoice['under_invoice_no']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Note</label>
+                                                    <input type="text" name="invoice_note[]" class="form-control" value="<?php echo htmlspecialchars($invoice['note']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Quantity</label>
+                                                    <input type="text" name="invoice_quantity[]" class="form-control" value="<?php echo isset($invoice['quantity']) ? number_format($invoice['quantity']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Unit Type</label>
+                                                    <input type="text" name="invoice_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($invoice['unit_type']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Item Description</label>
+                                                    <input type="text" name="invoice_item_desc[]" class="form-control" value="<?php echo htmlspecialchars($invoice['item_description']); ?>">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <button type="button" class="btn-add-row" onclick="addRow('invoice')">+ Add Item</button>
+                            <?php endif; ?>
+
+                            <?php if ($edit_invoice['type'] == 'drwithprice' && !empty($dr_with_prices)): ?>
+                                <div class="section-header">
+                                    <h4><i class="fas fa-dollar-sign"></i> DR with Price Items</h4>
+                                </div>
+                                <div id="price-section">
+                                    <?php foreach ($dr_with_prices as $index => $item): ?>
+                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label>Machine Model</label>
+                                                    <input type="text" name="price_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($item['machine_model']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Quantity</label>
+                                                    <input type="text" name="price_quantity[]" class="form-control" value="<?php echo isset($item['quantity']) ? number_format($item['quantity']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Price</label>
+                                                    <input type="text" name="price[]" class="form-control" value="<?php echo isset($item['price']) ? number_format($item['price'], 2) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Unit Type</label>
+                                                    <input type="text" name="price_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($item['unit_type']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Item Description</label>
+                                                    <input type="text" name="price_item_desc[]" class="form-control" value="<?php echo htmlspecialchars($item['item_description']); ?>">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <button type="button" class="btn-add-row" onclick="addRow('price')">+ Add Item</button>
+                            <?php endif; ?>
+
+                            <?php if ($edit_invoice['type'] == 'useddr' && !empty($used_drs)): ?>
+                                <div class="section-header">
+                                    <h4><i class="fas fa-tools"></i> Used DR Items</h4>
+                                </div>
+                                <div id="useddr-section">
+                                    <?php foreach ($used_drs as $index => $item): ?>
+                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label>Machine Model</label>
+                                                    <input type="text" name="useddr_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($item['machine_model']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Serial No.</label>
+                                                    <input type="text" name="useddr_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($item['serial_no']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>MR Start</label>
+                                                    <input type="text" name="useddr_mr_start[]" class="form-control" value="<?php echo isset($item['mr_start']) ? number_format($item['mr_start']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Technician Name</label>
+                                                    <input type="text" name="useddr_technician_name[]" class="form-control" value="<?php echo htmlspecialchars($item['technician_name']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>PR Number</label>
+                                                    <input type="text" name="useddr_pr_number[]" class="form-control" value="<?php echo htmlspecialchars($item['pr_number']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Quantity</label>
+                                                    <input type="text" name="useddr_quantity[]" class="form-control" value="<?php echo isset($item['quantity']) ? number_format($item['quantity']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Unit Type</label>
+                                                    <input type="text" name="useddr_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($item['unit_type']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Item Description</label>
+                                                    <input type="text" name="useddr_item_desc[]" class="form-control" value="<?php echo htmlspecialchars($item['item_description']); ?>">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <button type="button" class="btn-add-row" onclick="addRow('useddr')">+ Add Item</button>
+                            <?php endif; ?>
+
+                            <?php if ($edit_invoice['type'] == 'pulloutmachine' && !empty($pullout_machines)): ?>
+                                <div class="section-header">
+                                    <h4><i class="fas fa-arrow-circle-left"></i> Pullout Machines</h4>
+                                </div>
+                                <div id="pullout-section">
+                                    <?php foreach ($pullout_machines as $index => $machine): ?>
+                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label>Machine Model</label>
+                                                    <input type="text" name="pullout_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Serial No.</label>
+                                                    <input type="text" name="pullout_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>MR End</label>
+                                                    <input type="text" name="pullout_mr_end[]" class="form-control" value="<?php echo isset($machine['mr_end']) ? number_format($machine['mr_end']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Impression</label>
+                                                    <input type="text" name="pullout_color_imp[]" class="form-control" value="<?php echo isset($machine['color_impression']) ? number_format($machine['color_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Black Impression</label>
+                                                    <input type="text" name="pullout_black_imp[]" class="form-control" value="<?php echo isset($machine['black_impression']) ? number_format($machine['black_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Large Impression</label>
+                                                    <input type="text" name="pullout_color_large_imp[]" class="form-control" value="<?php echo isset($machine['color_large_impression']) ? number_format($machine['color_large_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+
+                            <?php endif; ?>
+
+                            <?php if ($edit_invoice['type'] == 'pulloutandreplacement' && (!empty($pullout_machines) || !empty($replacement_machines))): ?>
+                                <!-- Pullout Machines Section -->
+                                <div class="section-header">
+                                    <h4><i class="fas fa-arrow-circle-left"></i> Pullout Machines</h4>
+                                </div>
+                                <div id="pullout-section">
+                                    <?php foreach ($pullout_machines as $index => $machine): ?>
+                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label>Machine Model</label>
+                                                    <input type="text" name="pullout_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Serial No.</label>
+                                                    <input type="text" name="pullout_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>MR End</label>
+                                                    <input type="text" name="pullout_mr_end[]" class="form-control" value="<?php echo isset($machine['mr_end']) ? number_format($machine['mr_end']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Impression</label>
+                                                    <input type="text" name="pullout_color_imp[]" class="form-control" value="<?php echo isset($machine['color_impression']) ? number_format($machine['color_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Black Impression</label>
+                                                    <input type="text" name="pullout_black_imp[]" class="form-control" value="<?php echo isset($machine['black_impression']) ? number_format($machine['black_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Large Impression</label>
+                                                    <input type="text" name="pullout_color_large_imp[]" class="form-control" value="<?php echo isset($machine['color_large_impression']) ? number_format($machine['color_large_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <button type="button" class="btn-add-row" onclick="addRow('pullout')">+ Add Pullout Machine</button>
+
+                                <!-- Replacement Machines Section -->
+                                <div class="section-header" style="margin-top: 30px;">
+                                    <h4><i class="fas fa-exchange-alt"></i> Replacement Machines</h4>
+                                </div>
+                                <div id="replacement-section">
+                                    <?php foreach ($replacement_machines as $index => $machine): ?>
+                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label>Machine Model</label>
+                                                    <input type="text" name="replace_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Serial No.</label>
+                                                    <input type="text" name="replace_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>MR Start</label>
+                                                    <input type="text" name="replace_mr_start[]" class="form-control" value="<?php echo isset($machine['mr_start']) ? number_format($machine['mr_start']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Impression</label>
+                                                    <input type="text" name="replace_color_imp[]" class="form-control" value="<?php echo isset($machine['color_impression']) ? number_format($machine['color_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Black Impression</label>
+                                                    <input type="text" name="replace_black_imp[]" class="form-control" value="<?php echo isset($machine['black_impression']) ? number_format($machine['black_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Large Impression</label>
+                                                    <input type="text" name="replace_color_large_imp[]" class="form-control" value="<?php echo isset($machine['color_large_impression']) ? number_format($machine['color_large_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <button type="button" class="btn-add-row" onclick="addRow('replace')">+ Add Replacement Machine</button>
+                            <?php endif; ?>
+
+                        </div>
+                        <div class="form-actions">
+                            <input type="hidden" name="id" value="<?php echo $edit_invoice['id']; ?>">
+                            <input type="hidden" name="action" value="update">
+                            <button type="button" class="btn btn-secondary" onclick="closeModal('editInvoiceModal')">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Update Invoice</button>
+                        </div>
+                    </form>
                 </div>
-                <form method="POST" action="">
-                    <div class="modal-body">
-
-                        <!-- Main Details Section -->
-                        <div class="section-header">
-                            <h4><i class="fas fa-info-circle"></i> Main Details</h4>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="si_number">SI Number *</label>
-                                <input type="text" name="si_number" class="form-control" value="<?php echo htmlspecialchars($edit_invoice['si_number']); ?>" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="dr_number">DR Number *</label>
-                                <input type="text" name="dr_number" class="form-control" value="<?php echo htmlspecialchars($edit_invoice['dr_number']); ?>" required readonly>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="delivered_to">Delivered To *</label>
-                            <input type="text" name="delivered_to" class="form-control" value="<?php echo htmlspecialchars($edit_invoice['delivered_to']); ?>" required>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="tin">TIN *</label>
-                                <input type="text" name="tin" class="form-control" value="<?php echo htmlspecialchars($edit_invoice['tin']); ?>" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="si_date">SI Date *</label>
-                                <input type="date" name="si_date" class="form-control" value="<?php echo $edit_invoice['si_date']; ?>" required>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="address">Address *</label>
-                            <textarea name="address" class="form-control" rows="2" required><?php echo htmlspecialchars($edit_invoice['address']); ?></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="terms">Terms *</label>
-                            <input type="text" name="terms" class="form-control" value="<?php echo htmlspecialchars($edit_invoice['terms']); ?>" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="particulars">Particulars</label>
-                            <textarea name="particulars" class="form-control" rows="3"><?php echo htmlspecialchars($edit_invoice['particulars']); ?></textarea>
-                        </div>
-
-                        <!-- Dynamic Sections Based on Invoice Type -->
-                        <?php if ($edit_invoice['type'] == 'bnew' && !empty($bnew_machines)): ?>
-                            <div class="section-header">
-                                <h4><i class="fas fa-robot"></i> Brand New Machines</h4>
-                            </div>
-                            <div id="bnew-section">
-                                <?php foreach ($bnew_machines as $index => $machine): ?>
-                                    <div class="dynamic-row" data-index="<?php echo $index; ?>">
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label>Unit Type</label>
-                                                <input type="text" name="bnew_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($machine['unit_type']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Machine Model</label>
-                                                <input type="text" name="bnew_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Serial No.</label>
-                                                <input type="text" name="bnew_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <button type="button" class="btn-add-row" onclick="addRow('bnew')">+ Add Machine</button>
-                        <?php endif; ?>
-
-                        <?php if ($edit_invoice['type'] == 'usedmachine' || !empty($used_machines)): ?>
-                            <div class="section-header">
-                                <h4><i class="fas fa-cogs"></i> Used Machines</h4>
-                            </div>
-                            <div id="used-section">
-                                <?php foreach ($used_machines as $index => $machine): ?>
-                                    <div class="dynamic-row" data-index="<?php echo $index; ?>">
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label>Unit Type</label>
-                                                <input type="text" name="used_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($machine['unit_type']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Machine Model</label>
-                                                <input type="text" name="used_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Serial No.</label>
-                                                <input type="text" name="used_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>MR Start</label>
-                                                <input type="text" name="used_mr_start[]" class="form-control" value="<?php echo number_format($machine['mr_start']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Color Impression</label>
-                                                <input type="text" name="used_color_imp[]" class="form-control" value="<?php echo number_format($machine['color_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Black Impression</label>
-                                                <input type="text" name="used_black_imp[]" class="form-control" value="<?php echo number_format($machine['black_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Color Large Impression</label>
-                                                <input type="text" name="used_color_large_imp[]" class="form-control" value="<?php echo number_format($machine['color_large_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <button type="button" class="btn-add-row" onclick="addRow('used')">+ Add Machine</button>
-                        <?php endif; ?>
-
-                        <?php if ($edit_invoice['type'] == 'replacementmachine' && !empty($replacement_machines)): ?>
-                            <div class="section-header">
-                                <h4><i class="fas fa-exchange-alt"></i> Replacement Machines</h4>
-                            </div>
-                            <div id="replacement-section">
-                                <?php foreach ($replacement_machines as $index => $machine): ?>
-                                    <div class="dynamic-row" data-index="<?php echo $index; ?>">
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label>Unit Type</label>
-                                                <input type="text" name="replace_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($machine['unit_type']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Machine Model</label>
-                                                <input type="text" name="replace_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Serial No.</label>
-                                                <input type="text" name="replace_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>MR Start</label>
-                                                <input type="text" name="replace_mr_start[]" class="form-control" value="<?php echo number_format($machine['mr_start']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Color Impression</label>
-                                                <input type="text" name="replace_color_imp[]" class="form-control" value="<?php echo number_format($machine['color_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Black Impression</label>
-                                                <input type="text" name="replace_black_imp[]" class="form-control" value="<?php echo number_format($machine['black_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Color Large Impression</label>
-                                                <input type="text" name="replace_color_large_imp[]" class="form-control" value="<?php echo number_format($machine['color_large_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <button type="button" class="btn-add-row" onclick="addRow('replace')">+ Add Machine</button>
-                        <?php endif; ?>
-
-                        <?php if ($edit_invoice['type'] == 'drinvoice' && !empty($dr_invoices)): ?>
-                            <div class="section-header">
-                                <h4><i class="fas fa-file-invoice"></i> DR Invoice Items</h4>
-                            </div>
-                            <div class="form-group">
-                                <label>Delivery Type</label>
-                                <select name="delivery_type" class="form-control">
-                                    <option value="partial" <?php echo ($dr_invoices[0]['delivery_type'] == 'partial') ? 'selected' : ''; ?>>Partial</option>
-                                    <option value="complete" <?php echo ($dr_invoices[0]['delivery_type'] == 'complete') ? 'selected' : ''; ?>>Complete</option>
-                                </select>
-                            </div>
-                            <div id="invoice-section">
-                                <?php foreach ($dr_invoices as $index => $invoice): ?>
-                                    <div class="dynamic-row" data-index="<?php echo $index; ?>">
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label>Machine Model</label>
-                                                <input type="text" name="invoice_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($invoice['machine_model']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Under P.O No.</label>
-                                                <input type="text" name="invoice_under_po_no[]" class="form-control" value="<?php echo htmlspecialchars($invoice['under_po_no']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Under Invoice No.</label>
-                                                <input type="text" name="invoice_under_invoice_no[]" class="form-control" value="<?php echo htmlspecialchars($invoice['under_invoice_no']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Note</label>
-                                                <input type="text" name="invoice_note[]" class="form-control" value="<?php echo htmlspecialchars($invoice['note']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Quantity</label>
-                                                <input type="text" name="invoice_quantity[]" class="form-control" value="<?php echo number_format($invoice['quantity']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Unit Type</label>
-                                                <input type="text" name="invoice_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($invoice['unit_type']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Item Description</label>
-                                                <input type="text" name="invoice_item_desc[]" class="form-control" value="<?php echo htmlspecialchars($invoice['item_description']); ?>">
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <button type="button" class="btn-add-row" onclick="addRow('invoice')">+ Add Item</button>
-                        <?php endif; ?>
-
-                        <?php if ($edit_invoice['type'] == 'drwithprice' && !empty($dr_with_prices)): ?>
-                            <div class="section-header">
-                                <h4><i class="fas fa-dollar-sign"></i> DR with Price Items</h4>
-                            </div>
-                            <div id="price-section">
-                                <?php foreach ($dr_with_prices as $index => $item): ?>
-                                    <div class="dynamic-row" data-index="<?php echo $index; ?>">
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label>Machine Model</label>
-                                                <input type="text" name="price_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($item['machine_model']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Quantity</label>
-                                                <input type="text" name="price_quantity[]" class="form-control" value="<?php echo number_format($item['quantity']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Price</label>
-                                                <input type="text" name="price[]" class="form-control" value="<?php echo number_format($item['price'], 2); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Unit Type</label>
-                                                <input type="text" name="price_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($item['unit_type']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Item Description</label>
-                                                <input type="text" name="price_item_desc[]" class="form-control" value="<?php echo htmlspecialchars($item['item_description']); ?>">
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <button type="button" class="btn-add-row" onclick="addRow('price')">+ Add Item</button>
-                        <?php endif; ?>
-
-                        <?php if ($edit_invoice['type'] == 'useddr' && !empty($used_drs)): ?>
-                            <div class="section-header">
-                                <h4><i class="fas fa-tools"></i> Used DR Items</h4>
-                            </div>
-                            <div id="useddr-section">
-                                <?php foreach ($used_drs as $index => $item): ?>
-                                    <div class="dynamic-row" data-index="<?php echo $index; ?>">
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label>Machine Model</label>
-                                                <input type="text" name="useddr_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($item['machine_model']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Serial No.</label>
-                                                <input type="text" name="useddr_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($item['serial_no']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>MR Start</label>
-                                                <input type="text" name="useddr_mr_start[]" class="form-control" value="<?php echo number_format($item['mr_start']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Technician Name</label>
-                                                <input type="text" name="useddr_technician_name[]" class="form-control" value="<?php echo htmlspecialchars($item['technician_name']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>PR Number</label>
-                                                <input type="text" name="useddr_pr_number[]" class="form-control" value="<?php echo htmlspecialchars($item['pr_number']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Quantity</label>
-                                                <input type="text" name="useddr_quantity[]" class="form-control" value="<?php echo number_format($item['quantity']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Unit Type</label>
-                                                <input type="text" name="useddr_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($item['unit_type']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Item Description</label>
-                                                <input type="text" name="useddr_item_desc[]" class="form-control" value="<?php echo htmlspecialchars($item['item_description']); ?>">
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <button type="button" class="btn-add-row" onclick="addRow('useddr')">+ Add Item</button>
-                        <?php endif; ?>
-
-                        <?php if ($edit_invoice['type'] == 'pulloutmachine' && !empty($pullout_machines)): ?>
-                            <div class="section-header">
-                                <h4><i class="fas fa-arrow-circle-left"></i> Pullout Machines</h4>
-                            </div>
-                            <div id="pullout-section">
-                                <?php foreach ($pullout_machines as $index => $machine): ?>
-                                    <div class="dynamic-row" data-index="<?php echo $index; ?>">
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label>Machine Model</label>
-                                                <input type="text" name="pullout_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Serial No.</label>
-                                                <input type="text" name="pullout_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>MR End</label>
-                                                <input type="text" name="pullout_mr_end[]" class="form-control" value="<?php echo number_format($machine['mr_end']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Color Impression</label>
-                                                <input type="text" name="pullout_color_imp[]" class="form-control" value="<?php echo number_format($machine['color_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Black Impression</label>
-                                                <input type="text" name="pullout_black_imp[]" class="form-control" value="<?php echo number_format($machine['black_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Color Large Impression</label>
-                                                <input type="text" name="pullout_color_large_imp[]" class="form-control" value="<?php echo number_format($machine['color_large_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <button type="button" class="btn-add-row" onclick="addRow('pullout')">+ Add Machine</button>
-                        <?php endif; ?>
-
-                        <?php if ($edit_invoice['type'] == 'pulloutandreplacement' && (!empty($pullout_machines) || !empty($replacement_machines))): ?>
-                            <!-- Pullout Machines Section -->
-                            <div class="section-header">
-                                <h4><i class="fas fa-arrow-circle-left"></i> Pullout Machines</h4>
-                            </div>
-                            <div id="pullout-section">
-                                <?php foreach ($pullout_machines as $index => $machine): ?>
-                                    <div class="dynamic-row" data-index="<?php echo $index; ?>">
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label>Machine Model</label>
-                                                <input type="text" name="pullout_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Serial No.</label>
-                                                <input type="text" name="pullout_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>MR End</label>
-                                                <input type="text" name="pullout_mr_end[]" class="form-control" value="<?php echo number_format($machine['mr_end']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Color Impression</label>
-                                                <input type="text" name="pullout_color_imp[]" class="form-control" value="<?php echo number_format($machine['color_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Black Impression</label>
-                                                <input type="text" name="pullout_black_imp[]" class="form-control" value="<?php echo number_format($machine['black_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Color Large Impression</label>
-                                                <input type="text" name="pullout_color_large_imp[]" class="form-control" value="<?php echo number_format($machine['color_large_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <button type="button" class="btn-add-row" onclick="addRow('pullout')">+ Add Pullout Machine</button>
-
-                            <!-- Replacement Machines Section -->
-                            <div class="section-header" style="margin-top: 30px;">
-                                <h4><i class="fas fa-exchange-alt"></i> Replacement Machines</h4>
-                            </div>
-                            <div id="replacement-section">
-                                <?php foreach ($replacement_machines as $index => $machine): ?>
-                                    <div class="dynamic-row" data-index="<?php echo $index; ?>">
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label>Machine Model</label>
-                                                <input type="text" name="replace_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Serial No.</label>
-                                                <input type="text" name="replace_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>MR Start</label>
-                                                <input type="text" name="replace_mr_start[]" class="form-control" value="<?php echo number_format($machine['mr_start']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Color Impression</label>
-                                                <input type="text" name="replace_color_imp[]" class="form-control" value="<?php echo number_format($machine['color_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Black Impression</label>
-                                                <input type="text" name="replace_black_imp[]" class="form-control" value="<?php echo number_format($machine['black_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Color Large Impression</label>
-                                                <input type="text" name="replace_color_large_imp[]" class="form-control" value="<?php echo number_format($machine['color_large_impression']); ?>" oninput="formatPrice(this)">
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <button type="button" class="btn-add-row" onclick="addRow('replace')">+ Add Replacement Machine</button>
-                        <?php endif; ?>
-
-                    </div>
-                    <div class="form-actions">
-                        <input type="hidden" name="id" value="<?php echo $edit_invoice['id']; ?>">
-                        <input type="hidden" name="action" value="update">
-                        <button type="button" class="btn btn-secondary" onclick="closeModal('editInvoiceModal')">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Update Invoice</button>
-                    </div>
-                </form>
             </div>
-        </div>
+        <?php else: ?>
+            <!-- Show error if invoice not found -->
+            <div class="modal" id="editInvoiceModal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Error</h3>
+                        <button type="button" class="modal-close" onclick="closeModal('editInvoiceModal')">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Invoice with ID <?php echo $edit_id; ?> not found.</p>
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('editInvoiceModal')">Close</button>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
     <?php endif; ?>
 
-    <!-- View Invoice Modal -->
-    <?php if ($view_invoice): ?>
-        <div class="modal" id="viewInvoiceModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>View Invoice</h3>
-
-                    <!-- In View Modal -->
-                    <button class="modal-close" onclick="closeModal('viewInvoiceModal')">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <div class="invoice-detail-item">
-                            <div class="detail-label">SI Number</div>
-                            <div class="detail-value"><?php echo htmlspecialchars($view_invoice['si_number']); ?></div>
-                        </div>
-                        <div class="invoice-detail-item">
-                            <div class="detail-label">DR Number</div>
-                            <div class="detail-value"><?php echo htmlspecialchars($view_invoice['dr_number']); ?></div>
-                        </div>
-                        <div class="invoice-detail-item" style="grid-column: span 2;">
-                            <div class="detail-label">Delivered To</div>
-                            <div class="detail-value"><?php echo htmlspecialchars($view_invoice['delivered_to']); ?></div>
-                        </div>
-                        <div class="invoice-detail-item">
-                            <div class="detail-label">TIN</div>
-                            <div class="detail-value"><?php echo htmlspecialchars($view_invoice['tin']); ?></div>
-                        </div>
-                        <div class="invoice-detail-item">
-                            <div class="detail-label">SI Date</div>
-                            <div class="detail-value"><?php echo date('F d, Y', strtotime($view_invoice['si_date'])); ?></div>
-                        </div>
-                        <div class="invoice-detail-item" style="grid-column: span 2;">
-                            <div class="detail-label">Address</div>
-                            <div class="detail-value"><?php echo nl2br(htmlspecialchars($view_invoice['address'])); ?></div>
-                        </div>
-                        <div class="invoice-detail-item">
-                            <div class="detail-label">Terms</div>
-                            <div class="detail-value"><?php echo htmlspecialchars($view_invoice['terms']); ?></div>
-                        </div>
-                        <div class="invoice-detail-item">
-                            <div class="detail-label">Created At</div>
-                            <div class="detail-value"><?php echo date('F d, Y H:i', strtotime($view_invoice['created_at'])); ?></div>
-                        </div>
-                        <div class="invoice-detail-item">
-                            <div class="detail-label">Particulars</div>
-                            <div class="detail-value"><?php echo nl2br(htmlspecialchars($view_invoice['particulars'])); ?></div>
-                        </div>
-
-                        <!-- for DR Invoice -->
-                        <?php if (!empty($dr_invoices)):
-                            // Access only the first record in the array
-                            $dr_invoice = $dr_invoices[0];
-                        ?>
-                            <div class="invoice-detail-item">
-                                <div class="detail-label">Machine Model</div>
-                                <div class="detail-value"><?php echo nl2br(htmlspecialchars($dr_invoice['machine_model'])); ?></div>
-                            </div>
-                            <div class="invoice-detail-item">
-                                <div class="detail-label">Under P.O No.</div>
-                                <div class="detail-value"><?php echo nl2br(htmlspecialchars($dr_invoice['under_po_no'])); ?></div>
-                            </div>
-                            <div class="invoice-detail-item">
-                                <div class="detail-label">Under Invoice No.</div>
-                                <div class="detail-value"><?php echo nl2br(htmlspecialchars($dr_invoice['under_invoice_no'])); ?></div>
-                            </div>
-                            <div class="invoice-detail-item">
-                                <div class="detail-label">Notes</div>
-                                <div class="detail-value"><?php echo nl2br(htmlspecialchars($dr_invoice['note'])); ?></div>
-                            </div>
-                            <div class="invoice-detail-item">
-                                <div class="detail-label">Delivery Status</div>
-                                <div class="detail-value"><?php echo nl2br(htmlspecialchars($dr_invoice['delivery_type'])); ?></div>
-                            </div>
-                        <?php endif; ?>
-
-                        <?php if (!empty($used_drs)):
-                            $used_dr = $used_drs[0];
-                        ?>
-                            <div class="invoice-detail-item">
-                                <div class="detail-label">Technician Name</div>
-                                <div class="detail-value"><?php echo nl2br(htmlspecialchars($used_dr['technician_name'])); ?></div>
-                            </div>
-                            <div class="invoice-detail-item">
-                                <div class="detail-label">Machine Model</div>
-                                <div class="detail-value"><?php echo nl2br(htmlspecialchars($used_dr['machine_model'])); ?></div>
-                            </div>
-                            <div class="invoice-detail-item">
-                                <div class="detail-label">Serial Number</div>
-                                <div class="detail-value"><?php echo nl2br(htmlspecialchars($used_dr['serial_no'])); ?></div>
-                            </div>
-                            <div class="invoice-detail-item">
-                                <div class="detail-label">PR Number</div>
-                                <div class="detail-value"><?php echo nl2br(htmlspecialchars($used_dr['pr_number'])); ?></div>
-                            </div>
-                            <div class="invoice-detail-item">
-                                <div class="detail-label">MR Start</div>
-                                <div class="detail-value"><?php echo nl2br(htmlspecialchars($used_dr['mr_start'])); ?></div>
-                            </div>
-                        <?php endif; ?>
-
+    <!-- View Invoice Modal - FIXED VERSION -->
+    <?php if ($view_id > 0): ?>
+        <?php if ($view_invoice): ?>
+            <div class="modal" id="viewInvoiceModal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>View Invoice</h3>
+                        <button class="modal-close" onclick="closeModal('viewInvoiceModal')">&times;</button>
                     </div>
+                    <div class="modal-body">
+                        <!-- View modal content remains the same... -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="invoice-detail-item">
+                                <div class="detail-label">SI Number</div>
+                                <div class="detail-value"><?php echo htmlspecialchars($view_invoice['si_number']); ?></div>
+                            </div>
+                            <div class="invoice-detail-item">
+                                <div class="detail-label">DR Number</div>
+                                <div class="detail-value"><?php echo htmlspecialchars($view_invoice['dr_number']); ?></div>
+                            </div>
+                            <div class="invoice-detail-item" style="grid-column: span 2;">
+                                <div class="detail-label">Delivered To</div>
+                                <div class="detail-value"><?php echo htmlspecialchars($view_invoice['delivered_to']); ?></div>
+                            </div>
+                            <div class="invoice-detail-item">
+                                <div class="detail-label">TIN</div>
+                                <div class="detail-value"><?php echo htmlspecialchars($view_invoice['tin']); ?></div>
+                            </div>
+                            <div class="invoice-detail-item">
+                                <div class="detail-label">SI Date</div>
+                                <div class="detail-value"><?php echo date('F d, Y', strtotime($view_invoice['si_date'])); ?></div>
+                            </div>
+                            <div class="invoice-detail-item" style="grid-column: span 2;">
+                                <div class="detail-label">Address</div>
+                                <div class="detail-value"><?php echo nl2br(htmlspecialchars($view_invoice['address'])); ?></div>
+                            </div>
+                            <div class="invoice-detail-item">
+                                <div class="detail-label">Terms</div>
+                                <div class="detail-value"><?php echo htmlspecialchars($view_invoice['terms']); ?></div>
+                            </div>
+                            <div class="invoice-detail-item">
+                                <div class="detail-label">Created At</div>
+                                <div class="detail-value"><?php echo date('F d, Y H:i', strtotime($view_invoice['created_at'])); ?></div>
+                            </div>
+                            <div class="invoice-detail-item">
+                                <div class="detail-label">Particulars</div>
+                                <div class="detail-value"><?php echo nl2br(htmlspecialchars($view_invoice['particulars'])); ?></div>
+                            </div>
 
-                    <!-- View Bnew Machine -->
-                    <?php if (!empty($bnew_machines)): ?>
-                        <div class="bnew-section" style="margin-top: 20px;">
-                            <h4><i class="fas fa-robot"></i> BNew Machines</h4>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background: #e9ecef;">
-                                        <th style="padding: 10px; text-align: left;">Unit Type</th>
-                                        <th style="padding: 10px; text-align: left;">Machine Model</th>
-                                        <th style="padding: 10px; text-align: left;">Serial No.</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($bnew_machines as $machine): ?>
-                                        <tr style="border-bottom: 1px solid #dee2e6;">
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['machine_model']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['serial_no']); ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
+                            <!-- Rest of your view modal content... -->
+                            <!-- for DR Invoice -->
+                            <?php if (!empty($dr_invoices)):
+                                // Access only the first record in the array
+                                $dr_invoice = $dr_invoices[0];
+                            ?>
+                                <div class="invoice-detail-item">
+                                    <div class="detail-label">Machine Model</div>
+                                    <div class="detail-value"><?php echo nl2br(htmlspecialchars($dr_invoice['machine_model'])); ?></div>
+                                </div>
+                                <div class="invoice-detail-item">
+                                    <div class="detail-label">Under P.O No.</div>
+                                    <div class="detail-value"><?php echo nl2br(htmlspecialchars($dr_invoice['under_po_no'])); ?></div>
+                                </div>
+                                <div class="invoice-detail-item">
+                                    <div class="detail-label">Under Invoice No.</div>
+                                    <div class="detail-value"><?php echo nl2br(htmlspecialchars($dr_invoice['under_invoice_no'])); ?></div>
+                                </div>
+                                <div class="invoice-detail-item">
+                                    <div class="detail-label">Notes</div>
+                                    <div class="detail-value"><?php echo nl2br(htmlspecialchars($dr_invoice['note'])); ?></div>
+                                </div>
+                                <div class="invoice-detail-item">
+                                    <div class="detail-label">Delivery Status</div>
+                                    <div class="detail-value"><?php echo nl2br(htmlspecialchars($dr_invoice['delivery_type'])); ?></div>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($used_drs)):
+                                $used_dr = $used_drs[0];
+                            ?>
+                                <div class="invoice-detail-item">
+                                    <div class="detail-label">Technician Name</div>
+                                    <div class="detail-value"><?php echo nl2br(htmlspecialchars($used_dr['technician_name'])); ?></div>
+                                </div>
+                                <div class="invoice-detail-item">
+                                    <div class="detail-label">Machine Model</div>
+                                    <div class="detail-value"><?php echo nl2br(htmlspecialchars($used_dr['machine_model'])); ?></div>
+                                </div>
+                                <div class="invoice-detail-item">
+                                    <div class="detail-label">Serial Number</div>
+                                    <div class="detail-value"><?php echo nl2br(htmlspecialchars($used_dr['serial_no'])); ?></div>
+                                </div>
+                                <div class="invoice-detail-item">
+                                    <div class="detail-label">PR Number</div>
+                                    <div class="detail-value"><?php echo nl2br(htmlspecialchars($used_dr['pr_number'])); ?></div>
+                                </div>
+                                <div class="invoice-detail-item">
+                                    <div class="detail-label">MR Start</div>
+                                    <div class="detail-value"><?php echo nl2br(htmlspecialchars($used_dr['mr_start'])); ?></div>
+                                </div>
+                            <?php endif; ?>
                         </div>
-                    <?php endif; ?>
 
-                    <!-- View Used Machine -->
-                    <?php if (!empty($used_machines)): ?>
-                        <div class="used-machine-section" style="margin-top: 20px;">
-                            <h4><i class="fas fa-cogs"></i> Used Machines</h4>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background: #e9ecef;">
-                                        <th style="padding: 10px; text-align: left;">Unit Type</th>
-                                        <th style="padding: 10px; text-align: left;">Machine Model</th>
-                                        <th style="padding: 10px; text-align: left;">Serial No.</th>
-                                        <th style="padding: 10px; text-align: left;">MR Start</th>
-                                        <th style="padding: 10px; text-align: left;">Color Impression</th>
-                                        <th style="padding: 10px; text-align: left;">Black Impression</th>
-                                        <th style="padding: 10px; text-align: left;">Color Large Impression</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($used_machines as $machine): ?>
-                                        <tr style="border-bottom: 1px solid #dee2e6;">
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['machine_model']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['serial_no']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['mr_start']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_impression']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['black_impression']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_large_impression']); ?></td>
+                        <!-- Rest of your view sections... -->
+                        <!-- View Bnew Machine -->
+                        <?php if (!empty($bnew_machines)): ?>
+                            <div class="bnew-section" style="margin-top: 20px;">
+                                <h4><i class="fas fa-robot"></i> BNew Machines</h4>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: #e9ecef;">
+                                            <th style="padding: 10px; text-align: left;">Unit Type</th>
+                                            <th style="padding: 10px; text-align: left;">Machine Model</th>
+                                            <th style="padding: 10px; text-align: left;">Serial No.</th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($bnew_machines as $machine): ?>
+                                            <tr style="border-bottom: 1px solid #dee2e6;">
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['machine_model']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['serial_no']); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
 
-                    <!-- View Replacement Machine -->
-                    <?php if (!empty($replacement_machines)): ?>
-
-                        <div class="replacement-machine-section" style="margin-top: 20px;">
-                            <h4><i class="fas fa-cogs"></i> Replacement Machines</h4>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background: #e9ecef;">
-                                        <th style="padding: 10px; text-align: left;">Unit Type</th>
-                                        <th style="padding: 10px; text-align: left;">Machine Model</th>
-                                        <th style="padding: 10px; text-align: left;">Serial No.</th>
-                                        <th style="padding: 10px; text-align: left;">MR Start</th>
-                                        <th style="padding: 10px; text-align: left;">Color Impression</th>
-                                        <th style="padding: 10px; text-align: left;">Black Impression</th>
-                                        <th style="padding: 10px; text-align: left;">Color Large Impression</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($replacement_machines as $machine): ?>
-                                        <tr style="border-bottom: 1px solid #dee2e6;">
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['machine_model']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['serial_no']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['mr_start']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_impression']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['black_impression']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_large_impression']); ?></td>
+                        <!-- View Used Machine -->
+                        <?php if (!empty($used_machines)): ?>
+                            <div class="used-machine-section" style="margin-top: 20px;">
+                                <h4><i class="fas fa-cogs"></i> Used Machines</h4>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: #e9ecef;">
+                                            <th style="padding: 10px; text-align: left;">Unit Type</th>
+                                            <th style="padding: 10px; text-align: left;">Machine Model</th>
+                                            <th style="padding: 10px; text-align: left;">Serial No.</th>
+                                            <th style="padding: 10px; text-align: left;">MR Start</th>
+                                            <th style="padding: 10px; text-align: left;">Color Impression</th>
+                                            <th style="padding: 10px; text-align: left;">Black Impression</th>
+                                            <th style="padding: 10px; text-align: left;">Color Large Impression</th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($used_machines as $machine): ?>
+                                            <tr style="border-bottom: 1px solid #dee2e6;">
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['machine_model']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['serial_no']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['mr_start']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_impression']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['black_impression']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_large_impression']); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
 
-                    <!-- View DR Invoice -->
-                    <?php if (!empty($dr_invoices)): ?>
-                        <div class="dr-invoice-section" style="margin-top: 20px;">
-                            <h4><i class="fas fa-file-invoice"></i> DR Invoice</h4>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background: #e9ecef;">
-                                        <th style="padding: 10px; text-align: left;">Unit Type</th>
-                                        <th style="padding: 10px; text-align: left;">Quantity</th>
-                                        <th style="padding: 10px; text-align: left;">Item Description</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($dr_invoices as $machine): ?>
-                                        <tr style="border-bottom: 1px solid #dee2e6;">
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['quantity']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['item_description']); ?></td>
+                        <!-- View Replacement Machine -->
+                        <?php if (!empty($replacement_machines)): ?>
+
+                            <div class="replacement-machine-section" style="margin-top: 20px;">
+                                <h4><i class="fas fa-cogs"></i> Replacement Machines</h4>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: #e9ecef;">
+                                            <th style="padding: 10px; text-align: left;">Unit Type</th>
+                                            <th style="padding: 10px; text-align: left;">Machine Model</th>
+                                            <th style="padding: 10px; text-align: left;">Serial No.</th>
+                                            <th style="padding: 10px; text-align: left;">MR Start</th>
+                                            <th style="padding: 10px; text-align: left;">Color Impression</th>
+                                            <th style="padding: 10px; text-align: left;">Black Impression</th>
+                                            <th style="padding: 10px; text-align: left;">Color Large Impression</th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($replacement_machines as $machine): ?>
+                                            <tr style="border-bottom: 1px solid #dee2e6;">
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['machine_model']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['serial_no']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['mr_start']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_impression']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['black_impression']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_large_impression']); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
 
-                    <!-- View DR with Price -->
-                    <?php if (!empty($dr_with_prices)): ?>
-                        <div class="dr-with-price-section" style="margin-top: 20px;">
-                            <h4><i class="fas fa-file-invoice-dollar"></i> DR with Price</h4>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background: #e9ecef;">
-                                        <th style="padding: 10px; text-align: left;">Machine Model</th>
-                                        <th style="padding: 10px; text-align: left;">Quantity</th>
-                                        <th style="padding: 10px; text-align: left;">Price</th>
-                                        <th style="padding: 10px; text-align: left;">Total</th>
-                                        <th style="padding: 10px; text-align: left;">Unit Type</th>
-                                        <th style="padding: 10px; text-align: left;">Item Description</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($dr_with_prices as $machine): ?>
-                                        <tr style="border-bottom: 1px solid #dee2e6;">
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['machine_model']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['quantity']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['price'], 2); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['total'], 2); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['item_description']); ?></td>
+                        <!-- View DR Invoice -->
+                        <?php if (!empty($dr_invoices)): ?>
+                            <div class="dr-invoice-section" style="margin-top: 20px;">
+                                <h4><i class="fas fa-file-invoice"></i> DR Invoice</h4>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: #e9ecef;">
+                                            <th style="padding: 10px; text-align: left;">Unit Type</th>
+                                            <th style="padding: 10px; text-align: left;">Quantity</th>
+                                            <th style="padding: 10px; text-align: left;">Item Description</th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($dr_invoices as $machine): ?>
+                                            <tr style="border-bottom: 1px solid #dee2e6;">
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
+                                                <td style="padding: 10px;"><?php echo number_format($machine['quantity']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['item_description']); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
 
-                    <!-- View Used DR -->
-                    <?php if (!empty($used_drs)): ?>
-                        <div class="used-dr-section" style="margin-top: 20px;">
-                            <h4><i class="fas fa-file-invoice-dollar"></i> Used DR</h4>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background: #e9ecef;">
-                                        <th style="padding: 10px; text-align: left;">Item Description</th>
-                                        <th style="padding: 10px; text-align: left;">Unit Type</th>
-                                        <th style="padding: 10px; text-align: left;">Quantity</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($used_drs as $machine): ?>
-                                        <tr style="border-bottom: 1px solid #dee2e6;">
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['item_description']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['quantity']); ?></td>
+                        <!-- View DR with Price -->
+                        <?php if (!empty($dr_with_prices)): ?>
+                            <div class="dr-with-price-section" style="margin-top: 20px;">
+                                <h4><i class="fas fa-file-invoice-dollar"></i> DR with Price</h4>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: #e9ecef;">
+                                            <th style="padding: 10px; text-align: left;">Machine Model</th>
+                                            <th style="padding: 10px; text-align: left;">Quantity</th>
+                                            <th style="padding: 10px; text-align: left;">Price</th>
+                                            <th style="padding: 10px; text-align: left;">Total</th>
+                                            <th style="padding: 10px; text-align: left;">Unit Type</th>
+                                            <th style="padding: 10px; text-align: left;">Item Description</th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($dr_with_prices as $machine): ?>
+                                            <tr style="border-bottom: 1px solid #dee2e6;">
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['machine_model']); ?></td>
+                                                <td style="padding: 10px;"><?php echo number_format($machine['quantity']); ?></td>
+                                                <td style="padding: 10px;"><?php echo number_format($machine['price'], 2); ?></td>
+                                                <td style="padding: 10px;"><?php echo number_format($machine['total'], 2); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['item_description']); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
 
-                    <!-- View Pullout Machines -->
-                    <?php if (!empty($pullout_machines)): ?>
-                        <div class="pullout-machine-section" style="margin-top: 20px;">
-                            <h4><i class="fas fa-file-invoice-dollar"></i> Pullout Machines</h4>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background: #e9ecef;">
-                                        <th style="padding: 10px; text-align: left;">Machine Model</th>
-                                        <th style="padding: 10px; text-align: left;">Serial No</th>
-                                        <th style="padding: 10px; text-align: left;">MR End</th>
-                                        <th style="padding: 10px; text-align: left;">Color Impression</th>
-                                        <th style="padding: 10px; text-align: left;">Black Impression</th>
-                                        <th style="padding: 10px; text-align: left;">Color Large Impression</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($pullout_machines as $index => $machine): ?>
-                                        <tr style="border-bottom: 1px solid #dee2e6;">
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['machine_model']); ?></td>
-                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['serial_no']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['mr_end']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['color_impression']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['black_impression']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['color_large_impression']); ?></td>
+                        <!-- View Used DR -->
+                        <?php if (!empty($used_drs)): ?>
+                            <div class="used-dr-section" style="margin-top: 20px;">
+                                <h4><i class="fas fa-file-invoice-dollar"></i> Used DR</h4>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: #e9ecef;">
+                                            <th style="padding: 10px; text-align: left;">Item Description</th>
+                                            <th style="padding: 10px; text-align: left;">Unit Type</th>
+                                            <th style="padding: 10px; text-align: left;">Quantity</th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($used_drs as $machine): ?>
+                                            <tr style="border-bottom: 1px solid #dee2e6;">
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['item_description']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
+                                                <td style="padding: 10px;"><?php echo number_format($machine['quantity']); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
 
-                    <div class="form-actions">
-                        <a href="?edit=<?php echo $view_invoice['id']; ?>" class="btn btn-primary">Edit Invoice</a>
-                        <button type="button" class="btn btn-secondary" onclick="closeModal('viewInvoiceModal')">Close</button>
+                        <!-- View Pullout Machines -->
+                        <?php if (!empty($pullout_machines)): ?>
+                            <div class="pullout-machine-section" style="margin-top: 20px;">
+                                <h4><i class="fas fa-file-invoice-dollar"></i> Pullout Machines</h4>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: #e9ecef;">
+                                            <th style="padding: 10px; text-align: left;">Machine Model</th>
+                                            <th style="padding: 10px; text-align: left;">Serial No</th>
+                                            <th style="padding: 10px; text-align: left;">MR End</th>
+                                            <th style="padding: 10px; text-align: left;">Color Impression</th>
+                                            <th style="padding: 10px; text-align: left;">Black Impression</th>
+                                            <th style="padding: 10px; text-align: left;">Color Large Impression</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($pullout_machines as $index => $machine): ?>
+                                            <tr style="border-bottom: 1px solid #dee2e6;">
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['machine_model']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['serial_no']); ?></td>
+                                                <td style="padding: 10px;"><?php echo number_format($machine['mr_end']); ?></td>
+                                                <td style="padding: 10px;"><?php echo number_format($machine['color_impression']); ?></td>
+                                                <td style="padding: 10px;"><?php echo number_format($machine['black_impression']); ?></td>
+                                                <td style="padding: 10px;"><?php echo number_format($machine['color_large_impression']); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+
+                        <div class="form-actions">
+                            <a href="?edit=<?php echo $view_invoice['id']; ?>" class="btn btn-primary">Edit Invoice</a>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal('viewInvoiceModal')">Close</button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        <?php endif; ?>
     <?php endif; ?>
 
     <!-- <script src="Mainscript.js"></script> -->
-    <script src="./Mainscript.js"></script>
+    <!-- <script src="./Mainscript.js"></script> -->
 
 </body>
 
