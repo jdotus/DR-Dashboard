@@ -480,8 +480,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     // Refresh to show updated data
-    header("Location: " . $_SERVER['PHP_SELF']);
-    exit();
+    // header("Location: " . $_SERVER['PHP_SELF']);
+
+    // Only redirect if NOT already viewing/editing
+    if (!isset($_GET['edit']) && !isset($_GET['view'])) {
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit();
+    }
 }
 
 // Get all invoices from main table ordered by most recent
@@ -756,15 +761,21 @@ $stmt_bnew->close();
                                         <td><?php echo htmlspecialchars($row['terms']); ?></td>
                                         <td class="text-truncate"><?php echo htmlspecialchars($row['particulars']); ?></td>
                                         <td><?php echo date('M d, Y', strtotime($row['si_date'])); ?></td>
+                                        <!-- In your table row -->
                                         <td class="action-cell">
                                             <div class="action-buttons">
-                                                <button class="btn-action btn-view" onclick="viewInvoice(<?php echo $row['id']; ?>)" data-id="<?php echo $row['id']; ?>">
+                                                <button class="btn-action btn-view"
+                                                    onclick="viewInvoice(<?php echo $row['id']; ?>)"
+                                                    data-id="<?php echo $row['id']; ?>">
                                                     <i class="fas fa-eye"></i>View
                                                 </button>
-                                                <button class="btn-action btn-edit" onclick="editInvoice(<?php echo $row['id']; ?>)" data-id="<?php echo $row['id']; ?>">
+                                                <button class="btn-action btn-edit"
+                                                    onclick="editInvoice(<?php echo $row['id']; ?>)"
+                                                    data-id="<?php echo $row['id']; ?>">
                                                     <i class="fas fa-edit"></i>Edit
                                                 </button>
-                                                <button class="btn-action btn-print" onclick="window.location.href='print.php?id=<?php echo $row['id']; ?>'">
+                                                <button class="btn-action btn-print"
+                                                    onclick="window.location.href='print.php?id=<?php echo $row['id']; ?>'">
                                                     <i class="fas fa-print"></i>Print
                                                 </button>
                                             </div>
@@ -792,10 +803,13 @@ $stmt_bnew->close();
             <div class="modal-content">
                 <div class="modal-header">
                     <h3>Edit Invoice - <?php echo strtoupper($edit_invoice['type']); ?></h3>
-                    <button class="modal-close" onclick="closeModal('editInvoiceModal')">&times;</button>
+                    <!-- In Edit Modal -->
+                    <!-- <button class="modal-close" onclick="closeModal('editInvoiceModal')">&times;</button> -->
+                    <button type="button" class="modal-close" onclick="closeModal('editInvoiceModal')">&times;</button>
                 </div>
                 <form method="POST" action="">
                     <div class="modal-body">
+
                         <!-- Main Details Section -->
                         <div class="section-header">
                             <h4><i class="fas fa-info-circle"></i> Main Details</h4>
@@ -871,7 +885,7 @@ $stmt_bnew->close();
                             <button type="button" class="btn-add-row" onclick="addRow('bnew')">+ Add Machine</button>
                         <?php endif; ?>
 
-                        <?php if ($edit_invoice['type'] == 'usedmachine' && !empty($used_machines)): ?>
+                        <?php if ($edit_invoice['type'] == 'usedmachine' || !empty($used_machines)): ?>
                             <div class="section-header">
                                 <h4><i class="fas fa-cogs"></i> Used Machines</h4>
                             </div>
@@ -1232,6 +1246,8 @@ $stmt_bnew->close();
             <div class="modal-content">
                 <div class="modal-header">
                     <h3>View Invoice</h3>
+
+                    <!-- In View Modal -->
                     <button class="modal-close" onclick="closeModal('viewInvoiceModal')">&times;</button>
                 </div>
                 <div class="modal-body">
@@ -1374,10 +1390,10 @@ $stmt_bnew->close();
                                             <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
                                             <td style="padding: 10px;"><?php echo htmlspecialchars($machine['machine_model']); ?></td>
                                             <td style="padding: 10px;"><?php echo htmlspecialchars($machine['serial_no']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['mr_start']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['color_impression']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['black_impression']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['color_large_impression']); ?></td>
+                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['mr_start']); ?></td>
+                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_impression']); ?></td>
+                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['black_impression']); ?></td>
+                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_large_impression']); ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -1408,10 +1424,10 @@ $stmt_bnew->close();
                                             <td style="padding: 10px;"><?php echo htmlspecialchars($machine['unit_type']); ?></td>
                                             <td style="padding: 10px;"><?php echo htmlspecialchars($machine['machine_model']); ?></td>
                                             <td style="padding: 10px;"><?php echo htmlspecialchars($machine['serial_no']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['mr_start']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['color_impression']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['black_impression']); ?></td>
-                                            <td style="padding: 10px;"><?php echo number_format($machine['color_large_impression']); ?></td>
+                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['mr_start']); ?></td>
+                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_impression']); ?></td>
+                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['black_impression']); ?></td>
+                                            <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_large_impression']); ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -1540,7 +1556,9 @@ $stmt_bnew->close();
         </div>
     <?php endif; ?>
 
-    <script src="Mainscript.js"></script>
+    <!-- <script src="Mainscript.js"></script> -->
+    <script src="./Mainscript.js"></script>
+
 </body>
 
 </html>

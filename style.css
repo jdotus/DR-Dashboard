@@ -196,7 +196,7 @@ body {
     white-space: nowrap;
 }
 
-/* Action column styling - SIMPLIFIED */
+/* Action column styling */
 .invoices-table th:last-child {
     min-width: 150px;
     background-color: #f8fafc;
@@ -213,7 +213,7 @@ body {
     background-color: #f8fafc;
 }
 
-/* ACTION BUTTONS - OPTIMIZED */
+/* ACTION BUTTONS */
 .action-buttons {
     display: flex !important;
     gap: 8px;
@@ -247,10 +247,17 @@ body {
     white-space: nowrap;
     height: 34px;
     min-width: 70px;
+    pointer-events: auto !important;
 }
 
 .btn-action i {
     font-size: 11px;
+}
+
+.btn-view {
+    background-color: #f0f9ff !important;
+    color: #0ea5e9 !important;
+    border: 1px solid #e0f2fe !important;
 }
 
 .btn-edit {
@@ -374,7 +381,7 @@ body {
     margin-bottom: 10px;
 }
 
-/* Pagination */
+/* PAGINATION STYLES */
 .pagination {
     display: flex;
     justify-content: space-between;
@@ -387,25 +394,31 @@ body {
 .pagination-info {
     font-size: 14px;
     color: #718096;
+    font-weight: 500;
 }
 
 .pagination-controls {
     display: flex;
-    gap: 10px;
+    gap: 8px;
+    align-items: center;
 }
 
 .pagination-btn {
-    padding: 8px 16px;
+    padding: 8px 12px;
     background: white;
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
     color: #4a5568;
     transition: all 0.2s;
+    min-width: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.pagination-btn:hover {
+.pagination-btn:hover:not(:disabled) {
     background: #edf2f7;
     border-color: #cbd5e0;
 }
@@ -416,86 +429,88 @@ body {
     border-color: #3498db;
 }
 
-/* Modal Styles */
+.pagination-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+#pageNumbers {
+    display: flex;
+    gap: 5px;
+}
+
+/* Highlight search results */
+.highlight {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+/* ============================================
+MODAL STYLES - FIXED FOR VISIBILITY
+============================================ */
+/* MODAL FIXES */
 .modal {
-    display: none !important;
+    display: none;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-    align-items: center;
-    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
 }
 
-.modal.show {
+/* THIS IS THE CRITICAL FIX - Works for all modals */
+.show {
     display: flex !important;
     opacity: 1 !important;
     visibility: visible !important;
+    align-items: center;
+    justify-content: center;
 }
 
 .modal-content {
     background: white;
-    border-radius: 15px;
+    border-radius: 10px;
     width: 90%;
     max-width: 800px;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-    transform: translateY(-20px);
-    transition: transform 0.3s ease;
     position: relative;
-    z-index: 1001;
-}
-
-.modal.show .modal-content {
-    transform: translateY(0);
+    z-index: 10000;
 }
 
 .modal-header {
-    padding: 25px;
-    border-bottom: 1px solid #eee;
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
-    color: white;
-    border-radius: 15px 15px 0 0;
-}
-
-.modal-header h3 {
-    font-size: 20px;
-    color: white;
-    margin: 0;
 }
 
 .modal-close {
     background: none;
     border: none;
-    font-size: 28px;
-    color: white;
+    font-size: 24px;
     cursor: pointer;
-    transition: color 0.2s;
-    line-height: 1;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-close:hover {
-    color: #e0e0e0;
+    color: #666;
 }
 
 .modal-body {
-    padding: 25px;
+    padding: 20px;
+}
+
+body.modal-open {
+    overflow: hidden;
 }
 
 /* Form Styles */
@@ -569,14 +584,6 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 200px;
-}
-
-.highlight {
-    background-color: #fff3cd;
-    color: #856404;
-    padding: 2px 4px;
-    border-radius: 3px;
-    font-weight: bold;
 }
 
 .fade-in {
@@ -752,6 +759,11 @@ body {
         flex-direction: column;
         align-items: flex-start;
     }
+    
+    .modal-content {
+        width: 95%;
+        margin: 20px auto;
+    }
 }
 
 /* Type selector styles */
@@ -907,3 +919,21 @@ body {
         min-width: 45px;
     }
 }
+
+/* Modal specific responsive styles */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 10px auto;
+        max-height: 85vh;
+    }
+    
+    .modal-header h3 {
+        font-size: 18px;
+    }
+    
+    .modal-body {
+        padding: 15px;
+    }
+}
+
