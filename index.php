@@ -88,27 +88,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             try {
                 $main_id = intval($_POST['id']);
+
                 $dr_number = $_POST['dr_number'];
 
-                // Get current invoice type to know which tables to update
+                // First, get the CURRENT type from database to determine which tables to update
                 $stmt_get_type = $conn->prepare("SELECT type FROM main WHERE id = ?");
                 $stmt_get_type->bind_param("i", $main_id);
                 $stmt_get_type->execute();
-                $stmt_get_type->bind_result($invoice_type);
+                $stmt_get_type->bind_result($current_type);
                 $stmt_get_type->fetch();
                 $stmt_get_type->close();
 
-                // Update main table
+                // Update main table (keep the same type, don't change it from form)
                 $stmt = $conn->prepare("UPDATE main SET 
-                    si_number = ?, 
-                    dr_number = ?, 
-                    delivered_to = ?, 
-                    tin = ?, 
-                    address = ?, 
-                    terms = ?, 
-                    particulars = ?, 
-                    si_date = ? 
-                    WHERE id = ?");
+            si_number = ?, 
+            dr_number = ?, 
+            delivered_to = ?, 
+            tin = ?, 
+            address = ?, 
+            terms = ?, 
+            particulars = ?, 
+            si_date = ? 
+            WHERE id = ?");
 
                 $stmt->bind_param(
                     "ssssssssi",
@@ -126,22 +127,84 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $stmt->execute();
                 $stmt->close();
 
-                // Handle different invoice types
-                switch ($invoice_type) {
-                    case 'bnew':
-                        // Delete existing bnew_machine records
-                        $stmt_delete = $conn->prepare("DELETE FROM bnew_machine WHERE dr_number = ?");
-                        $stmt_delete->bind_param("i", $dr_number);
-                        $stmt_delete->execute();
-                        $stmt_delete->close();
+                // Handle different invoice types BASED ON EXISTING TYPE
+                // FIRST, DELETE ALL EXISTING RELATED RECORDS FOR THE CURRENT TYPE
+                // Only delete from tables related to the current type
 
-                        // Insert updated bnew_machine records if they exist
+                switch ($current_type) {
+                    case 'bnew':
+                        $delete_stmt = $conn->prepare("DELETE FROM bnew_machine WHERE dr_number = ?");
+                        $delete_stmt->bind_param("i", $dr_number);
+                        $delete_stmt->execute();
+                        $delete_stmt->close();
+                        break;
+
+                    case 'usedmachine':
+                        $delete_stmt = $conn->prepare("DELETE FROM used_machine WHERE dr_number = ?");
+                        $delete_stmt->bind_param("i", $dr_number);
+                        $delete_stmt->execute();
+                        $delete_stmt->close();
+                        break;
+
+                    case 'drinvoice':
+                        $delete_stmt = $conn->prepare("DELETE FROM dr_invoice WHERE dr_number = ?");
+                        $delete_stmt->bind_param("i", $dr_number);
+                        $delete_stmt->execute();
+                        $delete_stmt->close();
+                        break;
+
+                    case 'replacementmachine':
+                        $delete_stmt = $conn->prepare("DELETE FROM replacement_machine WHERE dr_number = ?");
+                        $delete_stmt->bind_param("i", $dr_number);
+                        $delete_stmt->execute();
+                        $delete_stmt->close();
+                        break;
+
+                    case 'drwithprice':
+                        $delete_stmt = $conn->prepare("DELETE FROM dr_with_price WHERE dr_number = ?");
+                        $delete_stmt->bind_param("i", $dr_number);
+                        $delete_stmt->execute();
+                        $delete_stmt->close();
+                        break;
+
+                    case 'useddr':
+                        $delete_stmt = $conn->prepare("DELETE FROM used_dr WHERE dr_number = ?");
+                        $delete_stmt->bind_param("i", $dr_number);
+                        $delete_stmt->execute();
+                        $delete_stmt->close();
+                        break;
+
+                    case 'pulloutmachine':
+                        $delete_stmt = $conn->prepare("DELETE FROM pullout_machine WHERE dr_number = ?");
+                        $delete_stmt->bind_param("i", $dr_number);
+                        $delete_stmt->execute();
+                        $delete_stmt->close();
+                        break;
+
+                    case 'pulloutandreplacement':
+                        $delete_stmt = $conn->prepare("DELETE FROM pullout_machine WHERE dr_number = ?");
+                        $delete_stmt->bind_param("i", $dr_number);
+                        $delete_stmt->execute();
+                        $delete_stmt->close();
+
+                        $delete_stmt = $conn->prepare("DELETE FROM replacement_machine WHERE dr_number = ?");
+                        $delete_stmt->bind_param("i", $dr_number);
+                        $delete_stmt->execute();
+                        $delete_stmt->close();
+                        break;
+                }
+
+                // NOW INSERT NEW RECORDS BASED ON THE CURRENT TYPE
+                // Only insert into tables related to the current type
+                switch ($current_type) {
+                    case 'bnew':
+                        // Insert bnew_machine records if they exist
                         if (isset($_POST['bnew_unit_type']) && is_array($_POST['bnew_unit_type'])) {
                             for ($i = 0; $i < count($_POST['bnew_unit_type']); $i++) {
                                 if (!empty($_POST['bnew_unit_type'][$i])) {
                                     $stmt_bnew = $conn->prepare("INSERT INTO bnew_machine (dr_number, unit_type, machine_model, serial_no) VALUES (?, ?, ?, ?)");
                                     $stmt_bnew->bind_param(
-                                        "isss",
+                                        "ssss",
                                         $dr_number,
                                         $_POST['bnew_unit_type'][$i],
                                         $_POST['bnew_machine_model'][$i],
@@ -155,13 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         break;
 
                     case 'usedmachine':
-                        // Delete existing used_machine records
-                        $stmt_delete = $conn->prepare("DELETE FROM used_machine WHERE dr_number = ?");
-                        $stmt_delete->bind_param("i", $dr_number);
-                        $stmt_delete->execute();
-                        $stmt_delete->close();
-
-                        // Insert updated used_machine records
+                        // Insert used_machine records
                         if (isset($_POST['used_unit_type']) && is_array($_POST['used_unit_type'])) {
                             for ($i = 0; $i < count($_POST['used_unit_type']); $i++) {
                                 if (!empty($_POST['used_unit_type'][$i])) {
@@ -173,7 +230,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                                     $stmt_used = $conn->prepare("INSERT INTO used_machine (dr_number, unit_type, machine_model, serial_no, mr_start, color_impression, black_impression, color_large_impression) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_used->bind_param(
-                                        "isssdddd",
+                                        "ssssssss",
                                         $dr_number,
                                         $_POST['used_unit_type'][$i],
                                         $_POST['used_machine_model'][$i],
@@ -191,13 +248,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         break;
 
                     case 'drinvoice':
-                        // Delete existing dr_invoice records
-                        $stmt_delete = $conn->prepare("DELETE FROM dr_invoice WHERE dr_number = ?");
-                        $stmt_delete->bind_param("i", $dr_number);
-                        $stmt_delete->execute();
-                        $stmt_delete->close();
-
-                        // Insert updated dr_invoice records
+                        // Insert dr_invoice records
                         if (isset($_POST['invoice_quantity']) && is_array($_POST['invoice_quantity'])) {
                             for ($i = 0; $i < count($_POST['invoice_quantity']); $i++) {
                                 if (!empty($_POST['invoice_quantity'][$i])) {
@@ -205,7 +256,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                                     $stmt_invoice = $conn->prepare("INSERT INTO dr_invoice (dr_number, machine_model, under_po_no, under_invoice_no, note, delivery_type, quantity, unit_type, item_description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_invoice->bind_param(
-                                        "isssssiss",
+                                        "ssssssiss",
                                         $dr_number,
                                         $_POST['invoice_machine_model'][$i],
                                         $_POST['invoice_under_po_no'][$i],
@@ -224,13 +275,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         break;
 
                     case 'replacementmachine':
-                        // Delete existing replacement_machine records
-                        $stmt_delete = $conn->prepare("DELETE FROM replacement_machine WHERE dr_number = ?");
-                        $stmt_delete->bind_param("i", $dr_number);
-                        $stmt_delete->execute();
-                        $stmt_delete->close();
-
-                        // Insert updated replacement_machine records
+                        // Insert replacement_machine records
                         if (isset($_POST['replace_unit_type']) && is_array($_POST['replace_unit_type'])) {
                             for ($i = 0; $i < count($_POST['replace_unit_type']); $i++) {
                                 if (!empty($_POST['replace_unit_type'][$i])) {
@@ -242,7 +287,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                                     $stmt_replace = $conn->prepare("INSERT INTO replacement_machine (dr_number, unit_type, machine_model, serial_no, mr_start, color_impression, black_impression, color_large_impression) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_replace->bind_param(
-                                        "isssdddd",
+                                        "ssssssss",
                                         $dr_number,
                                         $_POST['replace_unit_type'][$i],
                                         $_POST['replace_machine_model'][$i],
@@ -260,13 +305,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         break;
 
                     case 'drwithprice':
-                        // Delete existing dr_with_price records
-                        $stmt_delete = $conn->prepare("DELETE FROM dr_with_price WHERE dr_number = ?");
-                        $stmt_delete->bind_param("i", $dr_number);
-                        $stmt_delete->execute();
-                        $stmt_delete->close();
-
-                        // Insert updated dr_with_price records
+                        // Insert dr_with_price records
                         if (isset($_POST['price_quantity']) && is_array($_POST['price_quantity'])) {
                             for ($i = 0; $i < count($_POST['price_quantity']); $i++) {
                                 if (!empty($_POST['price_quantity'][$i])) {
@@ -274,9 +313,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     $price = str_replace(',', '', $_POST['price'][$i]);
                                     $total = $quantity * $price;
 
-                                    $stmt_price = $conn->prepare("INSERT INTO dr_with_price (dr_number, machine_model, quantity, price, total, unit_type, item_description) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                                    $stmt_price = $conn->prepare("INSERT INTO dr_with_price ( dr_number, machine_model, quantity, price, total, unit_type, item_description) VALUES (?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_price->bind_param(
-                                        "isddiss",
+                                        "ssssssss",
                                         $dr_number,
                                         $_POST['price_machine_model'][$i],
                                         $quantity,
@@ -293,13 +332,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         break;
 
                     case 'useddr':
-                        // Delete existing used_dr records
-                        $stmt_delete = $conn->prepare("DELETE FROM used_dr WHERE dr_number = ?");
-                        $stmt_delete->bind_param("i", $dr_number);
-                        $stmt_delete->execute();
-                        $stmt_delete->close();
-
-                        // Insert updated used_dr records
+                        // Insert used_dr records
                         if (isset($_POST['useddr_quantity']) && is_array($_POST['useddr_quantity'])) {
                             for ($i = 0; $i < count($_POST['useddr_quantity']); $i++) {
                                 if (!empty($_POST['useddr_quantity'][$i])) {
@@ -308,7 +341,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                                     $stmt_useddr = $conn->prepare("INSERT INTO used_dr (dr_number, machine_model, serial_no, mr_start, technician_name, pr_number, quantity, unit_type, item_description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_useddr->bind_param(
-                                        "isssssiss",
+                                        "ssssssss",
                                         $dr_number,
                                         $_POST['useddr_machine_model'][$i],
                                         $_POST['useddr_serial_no'][$i],
@@ -327,13 +360,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         break;
 
                     case 'pulloutmachine':
-                        // Delete existing pullout_machine records
-                        $stmt_delete = $conn->prepare("DELETE FROM pullout_machine WHERE dr_number = ?");
-                        $stmt_delete->bind_param("i", $dr_number);
-                        $stmt_delete->execute();
-                        $stmt_delete->close();
-
-                        // Insert updated pullout_machine records
+                        // Insert pullout_machine records
                         if (isset($_POST['pullout_machine_model']) && is_array($_POST['pullout_machine_model'])) {
                             for ($i = 0; $i < count($_POST['pullout_machine_model']); $i++) {
                                 if (!empty($_POST['pullout_machine_model'][$i])) {
@@ -345,7 +372,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                                     $stmt_pullout = $conn->prepare("INSERT INTO pullout_machine (dr_number, machine_model, serial_no, mr_end, color_impression, black_impression, color_large_impression) VALUES (?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_pullout->bind_param(
-                                        "isssddd",
+                                        "ssssssss",
                                         $dr_number,
                                         $_POST['pullout_machine_model'][$i],
                                         $_POST['pullout_serial_no'][$i],
@@ -362,31 +389,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         break;
 
                     case 'pulloutandreplacement':
-                        // Delete existing pullout_machine records
-                        $stmt_delete = $conn->prepare("DELETE FROM pullout_machine WHERE dr_number = ?");
-                        $stmt_delete->bind_param("i", $dr_number);
-                        $stmt_delete->execute();
-                        $stmt_delete->close();
-
-                        // Delete existing replacement_machine records
-                        $stmt_delete2 = $conn->prepare("DELETE FROM replacement_machine WHERE dr_number = ?");
-                        $stmt_delete2->bind_param("i", $dr_number);
-                        $stmt_delete2->execute();
-                        $stmt_delete2->close();
-
-                        // Insert updated pullout_machine records
+                        // Insert pullout_machine records
                         if (isset($_POST['pullout_machine_model']) && is_array($_POST['pullout_machine_model'])) {
                             for ($i = 0; $i < count($_POST['pullout_machine_model']); $i++) {
                                 if (!empty($_POST['pullout_machine_model'][$i])) {
                                     // Clean numeric fields
-                                    $mr_end = str_replace(',', '', $_POST['pullout_mr_end'][$i] ?? '0');
-                                    $color_imp = str_replace(',', '', $_POST['pullout_color_imp'][$i] ?? '0');
-                                    $black_imp = str_replace(',', '', $_POST['pullout_black_imp'][$i] ?? '0');
-                                    $color_large_imp = str_replace(',', '', $_POST['pullout_color_large_imp'][$i] ?? '0');
+                                    $mr_end = cleanNumeric($_POST['pullout_mr_end'][$i] ?? '0');
+                                    $color_imp = cleanNumeric($_POST['pullout_color_imp'][$i] ?? '0');
+                                    $black_imp = cleanNumeric($_POST['pullout_black_imp'][$i] ?? '0');
+                                    $color_large_imp = cleanNumeric($_POST['pullout_color_large_imp'][$i] ?? '0');
 
                                     $stmt_pullout = $conn->prepare("INSERT INTO pullout_machine (dr_number, machine_model, serial_no, mr_end, color_impression, black_impression, color_large_impression) VALUES (?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_pullout->bind_param(
-                                        "isssddd",
+                                        "sssssss", // Changed from "isssddd" to "sssssss"
                                         $dr_number,
                                         $_POST['pullout_machine_model'][$i],
                                         $_POST['pullout_serial_no'][$i],
@@ -401,7 +416,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             }
                         }
 
-                        // Insert updated replacement_machine records
+                        // Insert replacement_machine records
                         if (isset($_POST['replace_machine_model']) && is_array($_POST['replace_machine_model'])) {
                             for ($i = 0; $i < count($_POST['replace_machine_model']); $i++) {
                                 if (!empty($_POST['replace_machine_model'][$i])) {
@@ -411,10 +426,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     $black_imp = cleanNumeric($_POST['replace_black_imp'][$i] ?? '0');
                                     $color_large_imp = cleanNumeric($_POST['replace_color_large_imp'][$i] ?? '0');
 
-                                    $stmt_replace = $conn->prepare("INSERT INTO replacement_machine (dr_number, machine_model, serial_no, mr_start, color_impression, black_impression, color_large_impression) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                                    // Get unit_type from the form (should be included in pulloutandreplacement section)
+                                    $unit_type = $_POST['replace_unit_type'][$i] ?? ''; // This might be empty - see HTML fix below
+
+                                    // Use the correct parameter binding
+                                    $stmt_replace = $conn->prepare("INSERT INTO replacement_machine (dr_number, unit_type, machine_model, serial_no, mr_start, color_impression, black_impression, color_large_impression) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_replace->bind_param(
-                                        "isssddd",
+                                        "ssssssss", // Changed from "isssddd" to "ssssssss"
                                         $dr_number,
+                                        $unit_type,
                                         $_POST['replace_machine_model'][$i],
                                         $_POST['replace_serial_no'][$i],
                                         $mr_start,
@@ -438,44 +458,44 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $conn->rollback();
                 $error_message = "Error updating invoice: " . $e->getMessage();
             }
-        } elseif ($_POST['action'] == 'delete') {
-            // Delete invoice and related records
-            $main_id = intval($_POST['id']);
+        }
+    } elseif ($_POST['action'] == 'delete') {
+        // Delete invoice and related records
+        $main_id = intval($_POST['id']);
 
-            // Start transaction
-            $conn->begin_transaction();
+        // Start transaction
+        $conn->begin_transaction();
 
-            try {
-                // Delete from all related tables first using prepared statements
-                $tables = [
-                    'bnew_machine',
-                    'dr_invoice',
-                    'dr_with_price',
-                    'pullout_machine',
-                    'replacement_machine',
-                    'used_dr',
-                    'used_machine'
-                ];
+        try {
+            // Delete from all related tables first using prepared statements
+            $tables = [
+                'bnew_machine',
+                'dr_invoice',
+                'dr_with_price',
+                'pullout_machine',
+                'replacement_machine',
+                'used_dr',
+                'used_machine'
+            ];
 
-                foreach ($tables as $table) {
-                    $delete_stmt = $conn->prepare("DELETE FROM $table WHERE main_id = ?");
-                    $delete_stmt->bind_param("i", $main_id);
-                    $delete_stmt->execute();
-                    $delete_stmt->close();
-                }
-
-                // Delete from main table
-                $stmt = $conn->prepare("DELETE FROM main WHERE id = ?");
-                $stmt->bind_param("i", $main_id);
-                $stmt->execute();
-                $stmt->close();
-
-                $conn->commit();
-                $success_message = "Invoice deleted successfully!";
-            } catch (Exception $e) {
-                $conn->rollback();
-                $error_message = "Error deleting invoice: " . $e->getMessage();
+            foreach ($tables as $table) {
+                $delete_stmt = $conn->prepare("DELETE FROM $table WHERE main_id = ?");
+                $delete_stmt->bind_param("i", $main_id);
+                $delete_stmt->execute();
+                $delete_stmt->close();
             }
+
+            // Delete from main table
+            $stmt = $conn->prepare("DELETE FROM main WHERE id = ?");
+            $stmt->bind_param("i", $main_id);
+            $stmt->execute();
+            $stmt->close();
+
+            $conn->commit();
+            $success_message = "Invoice deleted successfully!";
+        } catch (Exception $e) {
+            $conn->rollback();
+            $error_message = "Error deleting invoice: " . $e->getMessage();
         }
     }
 
@@ -776,7 +796,7 @@ $stmt_bnew->close();
                                                     <i class="fas fa-edit"></i>Edit
                                                 </button>
                                                 <button class="btn-action btn-print"
-                                                    onclick="window.location.href='print.php?id=<?php echo $row['id']; ?>'">
+                                                    onclick="window.open('print.php?id=<?php echo $row['id']; ?>', '_blank')">
                                                     <i class="fas fa-print"></i>Print
                                                 </button>
                                             </div>
@@ -798,23 +818,28 @@ $stmt_bnew->close();
         </div>
     </div>
 
-    <!-- Edit Invoice Modal - DYNAMIC VERSION -->
     <!-- Edit Invoice Modal - FIXED VERSION -->
+
+    <!-- Edit Invoice Modal - UPDATED VERSION WITH TYPE SELECTOR -->
     <?php if ($edit_id > 0): ?>
         <?php if ($edit_invoice): ?>
+
             <div class="modal" id="editInvoiceModal" style="display: none;">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3>Edit Invoice - <?php echo strtoupper($edit_invoice['type']); ?></h3>
+                        <h3>Edit Invoice</h3>
                         <button type="button" class="modal-close" onclick="closeModal('editInvoiceModal')">&times;</button>
                     </div>
-                    <form method="POST" action="">
+                    <form method="POST" action="" id="editInvoiceForm">
                         <div class="modal-body">
-
                             <!-- Main Details Section -->
                             <div class="section-header">
-                                <h4><i class="fas fa-info-circle"></i> Main Details</h4>
+                                <h4><i class="fas fa-info-circle"></i> Main Details </h4>
                             </div>
+
+                            <!-- ADD THIS HIDDEN INPUT -->
+                            <input type="hidden" name="type" value="<?php echo htmlspecialchars($edit_invoice['type']); ?>">
+
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="si_number">SI Number *</label>
@@ -857,121 +882,134 @@ $stmt_bnew->close();
                                 <textarea name="particulars" class="form-control" rows="3"><?php echo htmlspecialchars($edit_invoice['particulars']); ?></textarea>
                             </div>
 
-                            <!-- Dynamic Sections Based on Invoice Type -->
-                            <?php if ($edit_invoice['type'] == 'bnew' && !empty($bnew_machines)): ?>
+                            <!-- Brand New Machines Section -->
+                            <div id="bnew-section" class="invoice-section" style="display: <?php echo ($edit_invoice['type'] == 'bnew') ? 'block' : 'none'; ?>;">
                                 <div class="section-header">
                                     <h4><i class="fas fa-robot"></i> Brand New Machines</h4>
                                 </div>
-                                <div id="bnew-section">
-                                    <?php foreach ($bnew_machines as $index => $machine): ?>
-                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                <div id="bnew-items">
+                                    <?php if (!empty($bnew_machines)): ?>
+                                        <?php foreach ($bnew_machines as $index => $machine): ?>
+                                            <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                                <div class="form-row">
+                                                    <div class="form-group">
+                                                        <label>Unit Type</label>
+                                                        <input type="text" name="bnew_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($machine['unit_type']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Machine Model</label>
+                                                        <input type="text" name="bnew_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Serial No.</label>
+                                                        <input type="text" name="bnew_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <!-- Default empty row if no existing data -->
+                                        <div class="dynamic-row" data-index="0">
                                             <div class="form-row">
                                                 <div class="form-group">
                                                     <label>Unit Type</label>
-                                                    <input type="text" name="bnew_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($machine['unit_type']); ?>">
+                                                    <input type="text" name="bnew_unit_type[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Machine Model</label>
-                                                    <input type="text" name="bnew_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                    <input type="text" name="bnew_machine_model[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Serial No.</label>
-                                                    <input type="text" name="bnew_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                    <input type="text" name="bnew_serial_no[]" class="form-control" value="">
                                                 </div>
                                             </div>
                                         </div>
-                                    <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </div>
+                            </div>
 
-                            <?php endif; ?>
-
-                            <?php if ($edit_invoice['type'] == 'usedmachine' && !empty($used_machines)): ?>
+                            <!-- Used Machines Section -->
+                            <div id="usedmachine-section" class="invoice-section" style="display: <?php echo ($edit_invoice['type'] == 'usedmachine') ? 'block' : 'none'; ?>;">
                                 <div class="section-header">
                                     <h4><i class="fas fa-cogs"></i> Used Machines</h4>
                                 </div>
-                                <div id="used-section">
-                                    <?php foreach ($used_machines as $index => $machine): ?>
-                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                <div id="usedmachine-items">
+                                    <?php if (!empty($used_machines)): ?>
+                                        <?php foreach ($used_machines as $index => $machine): ?>
+                                            <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                                <div class="form-row">
+                                                    <div class="form-group">
+                                                        <label>Unit Type</label>
+                                                        <input type="text" name="used_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($machine['unit_type']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Machine Model</label>
+                                                        <input type="text" name="used_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Serial No.</label>
+                                                        <input type="text" name="used_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>MR Start</label>
+                                                        <input type="text" name="used_mr_start[]" class="form-control" value="<?php echo htmlspecialchars($machine['mr_start']); ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Color Impression</label>
+                                                        <input type="text" name="used_color_imp[]" class="form-control" value="<?php echo htmlspecialchars($machine['color_impression']); ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Black Impression</label>
+                                                        <input type="text" name="used_black_imp[]" class="form-control" value="<?php echo htmlspecialchars($machine['black_impression']); ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Color Large Impression</label>
+                                                        <input type="text" name="used_color_large_imp[]" class="form-control" value="<?php echo htmlspecialchars($machine['color_large_impression']); ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <!-- Default empty row -->
+                                        <div class="dynamic-row" data-index="0">
                                             <div class="form-row">
                                                 <div class="form-group">
                                                     <label>Unit Type</label>
-                                                    <input type="text" name="used_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($machine['unit_type']); ?>">
+                                                    <input type="text" name="used_unit_type[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Machine Model</label>
-                                                    <input type="text" name="used_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                    <input type="text" name="used_machine_model[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Serial No.</label>
-                                                    <input type="text" name="used_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                    <input type="text" name="used_serial_no[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>MR Start</label>
-                                                    <input type="text" name="used_mr_start[]" class="form-control" value="<?php echo htmlspecialchars($machine['mr_start']); ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="used_mr_start[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Color Impression</label>
-                                                    <input type="text" name="used_color_imp[]" class="form-control" value="<?php echo htmlspecialchars($machine['color_impression']); ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="used_color_imp[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Black Impression</label>
-                                                    <input type="text" name="used_black_imp[]" class="form-control" value="<?php echo htmlspecialchars($machine['black_impression']); ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="used_black_imp[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Color Large Impression</label>
-                                                    <input type="text" name="used_color_large_imp[]" class="form-control" value="<?php echo htmlspecialchars($machine['color_large_impression']); ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="used_color_large_imp[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                             </div>
                                         </div>
-                                    <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </div>
+                            </div>
 
-                            <?php endif; ?>
-
-                            <?php if ($edit_invoice['type'] == 'replacementmachine' && !empty($replacement_machines)): ?>
-                                <div class="section-header">
-                                    <h4><i class="fas fa-exchange-alt"></i> Replacement Machines</h4>
-                                </div>
-                                <div id="replacement-section">
-                                    <?php foreach ($replacement_machines as $index => $machine): ?>
-                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
-                                            <div class="form-row">
-                                                <div class="form-group">
-                                                    <label>Unit Type</label>
-                                                    <input type="text" name="replace_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($machine['unit_type']); ?>">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Machine Model</label>
-                                                    <input type="text" name="replace_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Serial No.</label>
-                                                    <input type="text" name="replace_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>MR Start</label>
-                                                    <input type="text" name="replace_mr_start[]" class="form-control" value="<?php echo number_format($machine['mr_start']); ?>" oninput="formatPrice(this)">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Color Impression</label>
-                                                    <input type="text" name="replace_color_imp[]" class="form-control" value="<?php echo number_format($machine['color_impression']); ?>" oninput="formatPrice(this)">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Black Impression</label>
-                                                    <input type="text" name="replace_black_imp[]" class="form-control" value="<?php echo number_format($machine['black_impression']); ?>" oninput="formatPrice(this)">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Color Large Impression</label>
-                                                    <input type="text" name="replace_color_large_imp[]" class="form-control" value="<?php echo number_format($machine['color_large_impression']); ?>" oninput="formatPrice(this)">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-
-                            <?php endif; ?>
-
-                            <?php if ($edit_invoice['type'] == 'drinvoice' && !empty($dr_invoices)): ?>
+                            <!-- DR Invoice Section -->
+                            <div id="drinvoice-section" class="invoice-section" style="display: <?php echo ($edit_invoice['type'] == 'drinvoice') ? 'block' : 'none'; ?>;">
                                 <div class="section-header">
                                     <h4><i class="fas fa-file-invoice"></i> DR Invoice Items</h4>
                                 </div>
@@ -982,245 +1020,551 @@ $stmt_bnew->close();
                                         <option value="complete" <?php echo (isset($dr_invoices[0]['delivery_type']) && $dr_invoices[0]['delivery_type'] == 'complete') ? 'selected' : ''; ?>>Complete</option>
                                     </select>
                                 </div>
-                                <div id="invoice-section">
-                                    <?php foreach ($dr_invoices as $index => $invoice): ?>
-                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                <div id="drinvoice-items">
+                                    <?php if (!empty($dr_invoices)): ?>
+                                        <?php foreach ($dr_invoices as $index => $invoice): ?>
+                                            <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                                <div class="form-row">
+                                                    <div class="form-group">
+                                                        <label>Machine Model</label>
+                                                        <input type="text" name="invoice_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($invoice['machine_model']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Under P.O No.</label>
+                                                        <input type="text" name="invoice_under_po_no[]" class="form-control" value="<?php echo htmlspecialchars($invoice['under_po_no']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Under Invoice No.</label>
+                                                        <input type="text" name="invoice_under_invoice_no[]" class="form-control" value="<?php echo htmlspecialchars($invoice['under_invoice_no']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Note</label>
+                                                        <input type="text" name="invoice_note[]" class="form-control" value="<?php echo htmlspecialchars($invoice['note']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Quantity</label>
+                                                        <input type="text" name="invoice_quantity[]" class="form-control" value="<?php echo isset($invoice['quantity']) ? number_format($invoice['quantity']) : ''; ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Unit Type</label>
+                                                        <input type="text" name="invoice_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($invoice['unit_type']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Item Description</label>
+                                                        <input type="text" name="invoice_item_desc[]" class="form-control" value="<?php echo htmlspecialchars($invoice['item_description']); ?>">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <!-- Default empty row -->
+                                        <div class="dynamic-row" data-index="0">
                                             <div class="form-row">
                                                 <div class="form-group">
                                                     <label>Machine Model</label>
-                                                    <input type="text" name="invoice_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($invoice['machine_model']); ?>">
+                                                    <input type="text" name="invoice_machine_model[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Under P.O No.</label>
-                                                    <input type="text" name="invoice_under_po_no[]" class="form-control" value="<?php echo htmlspecialchars($invoice['under_po_no']); ?>">
+                                                    <input type="text" name="invoice_under_po_no[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Under Invoice No.</label>
-                                                    <input type="text" name="invoice_under_invoice_no[]" class="form-control" value="<?php echo htmlspecialchars($invoice['under_invoice_no']); ?>">
+                                                    <input type="text" name="invoice_under_invoice_no[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Note</label>
-                                                    <input type="text" name="invoice_note[]" class="form-control" value="<?php echo htmlspecialchars($invoice['note']); ?>">
+                                                    <input type="text" name="invoice_note[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Quantity</label>
-                                                    <input type="text" name="invoice_quantity[]" class="form-control" value="<?php echo isset($invoice['quantity']) ? number_format($invoice['quantity']) : ''; ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="invoice_quantity[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Unit Type</label>
-                                                    <input type="text" name="invoice_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($invoice['unit_type']); ?>">
+                                                    <input type="text" name="invoice_unit_type[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Item Description</label>
-                                                    <input type="text" name="invoice_item_desc[]" class="form-control" value="<?php echo htmlspecialchars($invoice['item_description']); ?>">
+                                                    <input type="text" name="invoice_item_desc[]" class="form-control" value="">
                                                 </div>
                                             </div>
                                         </div>
-                                    <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </div>
-                                <button type="button" class="btn-add-row" onclick="addRow('invoice')">+ Add Item</button>
-                            <?php endif; ?>
+                            </div>
 
-                            <?php if ($edit_invoice['type'] == 'drwithprice' && !empty($dr_with_prices)): ?>
+                            <!-- DR with Price Section -->
+                            <div id="drwithprice-section" class="invoice-section" style="display: <?php echo ($edit_invoice['type'] == 'drwithprice') ? 'block' : 'none'; ?>;">
                                 <div class="section-header">
                                     <h4><i class="fas fa-dollar-sign"></i> DR with Price Items</h4>
                                 </div>
-                                <div id="price-section">
-                                    <?php foreach ($dr_with_prices as $index => $item): ?>
-                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                <div id="drwithprice-items">
+                                    <?php if (!empty($dr_with_prices)): ?>
+                                        <?php foreach ($dr_with_prices as $index => $item): ?>
+                                            <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                                <div class="form-row">
+                                                    <div class="form-group">
+                                                        <label>Machine Model</label>
+                                                        <input type="text" name="price_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($item['machine_model']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Quantity</label>
+                                                        <input type="text" name="price_quantity[]" class="form-control" value="<?php echo isset($item['quantity']) ? number_format($item['quantity']) : ''; ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Price</label>
+                                                        <input type="text" name="price[]" class="form-control" value="<?php echo isset($item['price']) ? number_format($item['price'], 2) : ''; ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Unit Type</label>
+                                                        <input type="text" name="price_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($item['unit_type']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Item Description</label>
+                                                        <input type="text" name="price_item_desc[]" class="form-control" value="<?php echo htmlspecialchars($item['item_description']); ?>">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <!-- Default empty row -->
+                                        <div class="dynamic-row" data-index="0">
                                             <div class="form-row">
                                                 <div class="form-group">
                                                     <label>Machine Model</label>
-                                                    <input type="text" name="price_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($item['machine_model']); ?>">
+                                                    <input type="text" name="price_machine_model[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Quantity</label>
-                                                    <input type="text" name="price_quantity[]" class="form-control" value="<?php echo isset($item['quantity']) ? number_format($item['quantity']) : ''; ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="price_quantity[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Price</label>
-                                                    <input type="text" name="price[]" class="form-control" value="<?php echo isset($item['price']) ? number_format($item['price'], 2) : ''; ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="price[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Unit Type</label>
-                                                    <input type="text" name="price_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($item['unit_type']); ?>">
+                                                    <input type="text" name="price_unit_type[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Item Description</label>
-                                                    <input type="text" name="price_item_desc[]" class="form-control" value="<?php echo htmlspecialchars($item['item_description']); ?>">
+                                                    <input type="text" name="price_item_desc[]" class="form-control" value="">
                                                 </div>
                                             </div>
                                         </div>
-                                    <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </div>
-                                <button type="button" class="btn-add-row" onclick="addRow('price')">+ Add Item</button>
-                            <?php endif; ?>
+                            </div>
 
-                            <?php if ($edit_invoice['type'] == 'useddr' && !empty($used_drs)): ?>
+                            <!-- Used DR Section -->
+                            <div id="useddr-section" class="invoice-section" style="display: <?php echo ($edit_invoice['type'] == 'useddr') ? 'block' : 'none'; ?>;">
                                 <div class="section-header">
                                     <h4><i class="fas fa-tools"></i> Used DR Items</h4>
                                 </div>
-                                <div id="useddr-section">
-                                    <?php foreach ($used_drs as $index => $item): ?>
-                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                <div id="useddr-items">
+                                    <?php if (!empty($used_drs)): ?>
+                                        <?php foreach ($used_drs as $index => $item): ?>
+                                            <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                                <div class="form-row">
+                                                    <div class="form-group">
+                                                        <label>Machine Model</label>
+                                                        <input type="text" name="useddr_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($item['machine_model']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Serial No.</label>
+                                                        <input type="text" name="useddr_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($item['serial_no']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>MR Start</label>
+                                                        <input type="text" name="useddr_mr_start[]" class="form-control" value="<?php echo isset($item['mr_start']) ? number_format($item['mr_start']) : ''; ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Technician Name</label>
+                                                        <input type="text" name="useddr_technician_name[]" class="form-control" value="<?php echo htmlspecialchars($item['technician_name']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>PR Number</label>
+                                                        <input type="text" name="useddr_pr_number[]" class="form-control" value="<?php echo htmlspecialchars($item['pr_number']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Quantity</label>
+                                                        <input type="text" name="useddr_quantity[]" class="form-control" value="<?php echo isset($item['quantity']) ? number_format($item['quantity']) : ''; ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Unit Type</label>
+                                                        <input type="text" name="useddr_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($item['unit_type']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Item Description</label>
+                                                        <input type="text" name="useddr_item_desc[]" class="form-control" value="<?php echo htmlspecialchars($item['item_description']); ?>">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <!-- Default empty row -->
+                                        <div class="dynamic-row" data-index="0">
                                             <div class="form-row">
                                                 <div class="form-group">
                                                     <label>Machine Model</label>
-                                                    <input type="text" name="useddr_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($item['machine_model']); ?>">
+                                                    <input type="text" name="useddr_machine_model[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Serial No.</label>
-                                                    <input type="text" name="useddr_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($item['serial_no']); ?>">
+                                                    <input type="text" name="useddr_serial_no[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>MR Start</label>
-                                                    <input type="text" name="useddr_mr_start[]" class="form-control" value="<?php echo isset($item['mr_start']) ? number_format($item['mr_start']) : ''; ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="useddr_mr_start[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Technician Name</label>
-                                                    <input type="text" name="useddr_technician_name[]" class="form-control" value="<?php echo htmlspecialchars($item['technician_name']); ?>">
+                                                    <input type="text" name="useddr_technician_name[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>PR Number</label>
-                                                    <input type="text" name="useddr_pr_number[]" class="form-control" value="<?php echo htmlspecialchars($item['pr_number']); ?>">
+                                                    <input type="text" name="useddr_pr_number[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Quantity</label>
-                                                    <input type="text" name="useddr_quantity[]" class="form-control" value="<?php echo isset($item['quantity']) ? number_format($item['quantity']) : ''; ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="useddr_quantity[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Unit Type</label>
-                                                    <input type="text" name="useddr_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($item['unit_type']); ?>">
+                                                    <input type="text" name="useddr_unit_type[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Item Description</label>
-                                                    <input type="text" name="useddr_item_desc[]" class="form-control" value="<?php echo htmlspecialchars($item['item_description']); ?>">
+                                                    <input type="text" name="useddr_item_desc[]" class="form-control" value="">
                                                 </div>
                                             </div>
                                         </div>
-                                    <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </div>
-                                <button type="button" class="btn-add-row" onclick="addRow('useddr')">+ Add Item</button>
-                            <?php endif; ?>
+                            </div>
 
-                            <?php if ($edit_invoice['type'] == 'pulloutmachine' && !empty($pullout_machines)): ?>
+                            <!-- Pullout Machine Section -->
+                            <div id="pulloutmachine-section" class="invoice-section" style="display: <?php echo ($edit_invoice['type'] == 'pulloutmachine') ? 'block' : 'none'; ?>;">
                                 <div class="section-header">
                                     <h4><i class="fas fa-arrow-circle-left"></i> Pullout Machines</h4>
                                 </div>
-                                <div id="pullout-section">
-                                    <?php foreach ($pullout_machines as $index => $machine): ?>
-                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                <div id="pulloutmachine-items">
+                                    <?php if (!empty($pullout_machines)): ?>
+                                        <?php foreach ($pullout_machines as $index => $machine): ?>
+                                            <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                                <div class="form-row">
+                                                    <div class="form-group">
+                                                        <label>Machine Model</label>
+                                                        <input type="text" name="pullout_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Serial No.</label>
+                                                        <input type="text" name="pullout_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>MR End</label>
+                                                        <input type="text" name="pullout_mr_end[]" class="form-control" value="<?php echo isset($machine['mr_end']) ? number_format($machine['mr_end']) : ''; ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Color Impression</label>
+                                                        <input type="text" name="pullout_color_imp[]" class="form-control" value="<?php echo isset($machine['color_impression']) ? number_format($machine['color_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Black Impression</label>
+                                                        <input type="text" name="pullout_black_imp[]" class="form-control" value="<?php echo isset($machine['black_impression']) ? number_format($machine['black_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Color Large Impression</label>
+                                                        <input type="text" name="pullout_color_large_imp[]" class="form-control" value="<?php echo isset($machine['color_large_impression']) ? number_format($machine['color_large_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <!-- Default empty row -->
+                                        <div class="dynamic-row" data-index="0">
                                             <div class="form-row">
                                                 <div class="form-group">
                                                     <label>Machine Model</label>
-                                                    <input type="text" name="pullout_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                    <input type="text" name="pullout_machine_model[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Serial No.</label>
-                                                    <input type="text" name="pullout_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                    <input type="text" name="pullout_serial_no[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>MR End</label>
-                                                    <input type="text" name="pullout_mr_end[]" class="form-control" value="<?php echo isset($machine['mr_end']) ? number_format($machine['mr_end']) : ''; ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="pullout_mr_end[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Color Impression</label>
-                                                    <input type="text" name="pullout_color_imp[]" class="form-control" value="<?php echo isset($machine['color_impression']) ? number_format($machine['color_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="pullout_color_imp[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Black Impression</label>
-                                                    <input type="text" name="pullout_black_imp[]" class="form-control" value="<?php echo isset($machine['black_impression']) ? number_format($machine['black_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="pullout_black_imp[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Color Large Impression</label>
-                                                    <input type="text" name="pullout_color_large_imp[]" class="form-control" value="<?php echo isset($machine['color_large_impression']) ? number_format($machine['color_large_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="pullout_color_large_imp[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                             </div>
                                         </div>
-                                    <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </div>
+                            </div>
 
-                            <?php endif; ?>
-
-                            <?php if ($edit_invoice['type'] == 'pulloutandreplacement' && (!empty($pullout_machines) || !empty($replacement_machines))): ?>
-                                <!-- Pullout Machines Section -->
+                            <!-- Replacement Machine Section -->
+                            <div id="replacementmachine-section" class="invoice-section" style="display: <?php echo ($edit_invoice['type'] == 'replacementmachine') ? 'block' : 'none'; ?>;">
                                 <div class="section-header">
-                                    <h4><i class="fas fa-arrow-circle-left"></i> Pullout Machines</h4>
-                                </div>
-                                <div id="pullout-section">
-                                    <?php foreach ($pullout_machines as $index => $machine): ?>
-                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
-                                            <div class="form-row">
-                                                <div class="form-group">
-                                                    <label>Machine Model</label>
-                                                    <input type="text" name="pullout_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Serial No.</label>
-                                                    <input type="text" name="pullout_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>MR End</label>
-                                                    <input type="text" name="pullout_mr_end[]" class="form-control" value="<?php echo isset($machine['mr_end']) ? number_format($machine['mr_end']) : ''; ?>" oninput="formatPrice(this)">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Color Impression</label>
-                                                    <input type="text" name="pullout_color_imp[]" class="form-control" value="<?php echo isset($machine['color_impression']) ? number_format($machine['color_impression']) : ''; ?>" oninput="formatPrice(this)">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Black Impression</label>
-                                                    <input type="text" name="pullout_black_imp[]" class="form-control" value="<?php echo isset($machine['black_impression']) ? number_format($machine['black_impression']) : ''; ?>" oninput="formatPrice(this)">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Color Large Impression</label>
-                                                    <input type="text" name="pullout_color_large_imp[]" class="form-control" value="<?php echo isset($machine['color_large_impression']) ? number_format($machine['color_large_impression']) : ''; ?>" oninput="formatPrice(this)">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                                <button type="button" class="btn-add-row" onclick="addRow('pullout')">+ Add Pullout Machine</button>
-
-                                <!-- Replacement Machines Section -->
-                                <div class="section-header" style="margin-top: 30px;">
                                     <h4><i class="fas fa-exchange-alt"></i> Replacement Machines</h4>
                                 </div>
-                                <div id="replacement-section">
-                                    <?php foreach ($replacement_machines as $index => $machine): ?>
-                                        <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                <div id="replacementmachine-items">
+                                    <?php if (!empty($replacement_machines)): ?>
+                                        <?php foreach ($replacement_machines as $index => $machine): ?>
+                                            <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                                <div class="form-row">
+                                                    <div class="form-group">
+                                                        <label>Unit Type</label>
+                                                        <input type="text" name="replace_unit_type[]" class="form-control" value="<?php echo htmlspecialchars($machine['unit_type']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Machine Model</label>
+                                                        <input type="text" name="replace_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Serial No.</label>
+                                                        <input type="text" name="replace_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>MR Start</label>
+                                                        <input type="text" name="replace_mr_start[]" class="form-control" value="<?php echo htmlspecialchars($machine['mr_start']); ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Color Impression</label>
+                                                        <input type="text" name="replace_color_imp[]" class="form-control" value="<?php echo htmlspecialchars($machine['color_impression']); ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Black Impression</label>
+                                                        <input type="text" name="replace_black_imp[]" class="form-control" value="<?php echo htmlspecialchars($machine['black_impression']); ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Color Large Impression</label>
+                                                        <input type="text" name="replace_color_large_imp[]" class="form-control" value="<?php echo htmlspecialchars($machine['color_large_impression']); ?>" oninput="formatPrice(this)">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <!-- Default empty row -->
+                                        <div class="dynamic-row" data-index="0">
                                             <div class="form-row">
                                                 <div class="form-group">
+                                                    <label>Unit Type</label>
+                                                    <input type="text" name="replace_unit_type[]" class="form-control" value="">
+                                                </div>
+                                                <div class="form-group">
                                                     <label>Machine Model</label>
-                                                    <input type="text" name="replace_machine_model[]" class="form-control" value="<?php echo htmlspecialchars($machine['machine_model']); ?>">
+                                                    <input type="text" name="replace_machine_model[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Serial No.</label>
-                                                    <input type="text" name="replace_serial_no[]" class="form-control" value="<?php echo htmlspecialchars($machine['serial_no']); ?>">
+                                                    <input type="text" name="replace_serial_no[]" class="form-control" value="">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>MR Start</label>
-                                                    <input type="text" name="replace_mr_start[]" class="form-control" value="<?php echo isset($machine['mr_start']) ? number_format($machine['mr_start']) : ''; ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="replace_mr_start[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Color Impression</label>
-                                                    <input type="text" name="replace_color_imp[]" class="form-control" value="<?php echo isset($machine['color_impression']) ? number_format($machine['color_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="replace_color_imp[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Black Impression</label>
-                                                    <input type="text" name="replace_black_imp[]" class="form-control" value="<?php echo isset($machine['black_impression']) ? number_format($machine['black_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="replace_black_imp[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                                 <div class="form-group">
                                                     <label>Color Large Impression</label>
-                                                    <input type="text" name="replace_color_large_imp[]" class="form-control" value="<?php echo isset($machine['color_large_impression']) ? number_format($machine['color_large_impression']) : ''; ?>" oninput="formatPrice(this)">
+                                                    <input type="text" name="replace_color_large_imp[]" class="form-control" value="" oninput="formatPrice(this)">
                                                 </div>
                                             </div>
                                         </div>
-                                    <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </div>
-                                <button type="button" class="btn-add-row" onclick="addRow('replace')">+ Add Replacement Machine</button>
-                            <?php endif; ?>
+                            </div>
 
-                        </div>
+                            <!-- Pullout and Replacement Section - FIXED VERSION -->
+                            <div id="pulloutandreplacement-section" class="invoice-section" style="display: <?php echo ($edit_invoice['type'] == 'pulloutandreplacement') ? 'block' : 'none'; ?>;">
+                                <!-- Pullout Machines -->
+                                <div class="section-header">
+                                    <h4><i class="fas fa-arrow-circle-left"></i> Pullout Machines</h4>
+                                </div>
+                                <div id="pulloutandreplacement-pullout-items">
+                                    <?php if (!empty($pullout_machines)): ?>
+                                        <?php foreach ($pullout_machines as $index => $machine): ?>
+                                            <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                                <div class="form-row">
+                                                    <div class="form-group">
+                                                        <label>Machine Model</label>
+                                                        <input type="text" name="pullout_machine_model[]" class="form-control"
+                                                            value="<?php echo htmlspecialchars($machine['machine_model'] ?? ''); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Serial No.</label>
+                                                        <input type="text" name="pullout_serial_no[]" class="form-control"
+                                                            value="<?php echo htmlspecialchars($machine['serial_no'] ?? ''); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>MR End</label>
+                                                        <input type="text" name="pullout_mr_end[]" class="form-control"
+                                                            value="<?php echo isset($machine['mr_end']) && $machine['mr_end'] != 0 ? htmlspecialchars($machine['mr_end']) : ''; ?>"
+                                                            oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Color Impression</label>
+                                                        <input type="text" name="pullout_color_imp[]" class="form-control"
+                                                            value="<?php echo isset($machine['color_impression']) && $machine['color_impression'] != 0 ? htmlspecialchars($machine['color_impression']) : ''; ?>"
+                                                            oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Black Impression</label>
+                                                        <input type="text" name="pullout_black_imp[]" class="form-control"
+                                                            value="<?php echo isset($machine['black_impression']) && $machine['black_impression'] != 0 ? htmlspecialchars($machine['black_impression']) : ''; ?>"
+                                                            oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Color Large Impression</label>
+                                                        <input type="text" name="pullout_color_large_imp[]" class="form-control"
+                                                            value="<?php echo isset($machine['color_large_impression']) && $machine['color_large_impression'] != 0 ? htmlspecialchars($machine['color_large_impression']) : ''; ?>"
+                                                            oninput="formatPrice(this)">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <!-- Default empty row -->
+                                        <div class="dynamic-row" data-index="0">
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label>Machine Model</label>
+                                                    <input type="text" name="pullout_machine_model[]" class="form-control" value="">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Serial No.</label>
+                                                    <input type="text" name="pullout_serial_no[]" class="form-control" value="">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>MR End</label>
+                                                    <input type="text" name="pullout_mr_end[]" class="form-control" value="" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Impression</label>
+                                                    <input type="text" name="pullout_color_imp[]" class="form-control" value="" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Black Impression</label>
+                                                    <input type="text" name="pullout_black_imp[]" class="form-control" value="" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Large Impression</label>
+                                                    <input type="text" name="pullout_color_large_imp[]" class="form-control" value="" oninput="formatPrice(this)">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+
+                                <!-- Replacement Machines -->
+                                <div class="section-header" style="margin-top: 30px;">
+                                    <h4><i class="fas fa-exchange-alt"></i> Replacement Machines</h4>
+                                </div>
+                                <div id="pulloutandreplacement-replace-items">
+                                    <?php if (!empty($replacement_machines)): ?>
+                                        <?php foreach ($replacement_machines as $index => $machine): ?>
+                                            <div class="dynamic-row" data-index="<?php echo $index; ?>">
+                                                <div class="form-row">
+                                                    <div class="form-group">
+                                                        <label>Unit Type</label>
+                                                        <input type="text" name="replace_unit_type[]" class="form-control"
+                                                            value="<?php echo htmlspecialchars($machine['unit_type'] ?? ''); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Machine Model</label>
+                                                        <input type="text" name="replace_machine_model[]" class="form-control"
+                                                            value="<?php echo htmlspecialchars($machine['machine_model'] ?? ''); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Serial No.</label>
+                                                        <input type="text" name="replace_serial_no[]" class="form-control"
+                                                            value="<?php echo htmlspecialchars($machine['serial_no'] ?? ''); ?>">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>MR Start</label>
+                                                        <input type="text" name="replace_mr_start[]" class="form-control"
+                                                            value="<?php echo isset($machine['mr_start']) && $machine['mr_start'] != 0 ? number_format($machine['mr_start']) : ''; ?>"
+                                                            oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Color Impression</label>
+                                                        <input type="text" name="replace_color_imp[]" class="form-control"
+                                                            value="<?php echo isset($machine['color_impression']) && $machine['color_impression'] != 0 ? number_format($machine['color_impression']) : ''; ?>"
+                                                            oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Black Impression</label>
+                                                        <input type="text" name="replace_black_imp[]" class="form-control"
+                                                            value="<?php echo isset($machine['black_impression']) && $machine['black_impression'] != 0 ? number_format($machine['black_impression']) : ''; ?>"
+                                                            oninput="formatPrice(this)">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Color Large Impression</label>
+                                                        <input type="text" name="replace_color_large_imp[]" class="form-control"
+                                                            value="<?php echo isset($machine['color_large_impression']) && $machine['color_large_impression'] != 0 ? number_format($machine['color_large_impression']) : ''; ?>"
+                                                            oninput="formatPrice(this)">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <!-- Default empty row -->
+                                        <div class="dynamic-row" data-index="0">
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label>Unit Type</label>
+                                                    <input type="text" name="replace_unit_type[]" class="form-control" value="">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Machine Model</label>
+                                                    <input type="text" name="replace_machine_model[]" class="form-control" value="">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Serial No.</label>
+                                                    <input type="text" name="replace_serial_no[]" class="form-control" value="">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>MR Start</label>
+                                                    <input type="text" name="replace_mr_start[]" class="form-control" value="" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Impression</label>
+                                                    <input type="text" name="replace_color_imp[]" class="form-control" value="" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Black Impression</label>
+                                                    <input type="text" name="replace_black_imp[]" class="form-control" value="" oninput="formatPrice(this)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Color Large Impression</label>
+                                                    <input type="text" name="replace_color_large_imp[]" class="form-control" value="" oninput="formatPrice(this)">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div> <!-- Closing div for modal-body -->
+
                         <div class="form-actions">
                             <input type="hidden" name="id" value="<?php echo $edit_invoice['id']; ?>">
                             <input type="hidden" name="action" value="update">
@@ -1544,10 +1888,10 @@ $stmt_bnew->close();
                                             <tr style="border-bottom: 1px solid #dee2e6;">
                                                 <td style="padding: 10px;"><?php echo htmlspecialchars($machine['machine_model']); ?></td>
                                                 <td style="padding: 10px;"><?php echo htmlspecialchars($machine['serial_no']); ?></td>
-                                                <td style="padding: 10px;"><?php echo number_format($machine['mr_end']); ?></td>
-                                                <td style="padding: 10px;"><?php echo number_format($machine['color_impression']); ?></td>
-                                                <td style="padding: 10px;"><?php echo number_format($machine['black_impression']); ?></td>
-                                                <td style="padding: 10px;"><?php echo number_format($machine['color_large_impression']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['mr_end']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_impression']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['black_impression']); ?></td>
+                                                <td style="padding: 10px;"><?php echo htmlspecialchars($machine['color_large_impression']); ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>

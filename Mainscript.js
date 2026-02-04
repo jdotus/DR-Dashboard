@@ -110,13 +110,13 @@ function showModal(modalId) {
         }
     }, 50);
 }
-
-// Update URL for modal state (optional - for browser history)
+// Update URL for modal state - FIXED VERSION
 function updateURLForModal(modalId) {
     const currentURL = new URL(window.location);
     const modal = document.getElementById(modalId);
     
     if (modalId === 'editInvoiceModal') {
+        // Get ID from hidden input field in edit form
         const editId = modal?.querySelector('input[name="id"]')?.value;
         if (editId) {
             currentURL.searchParams.set('edit', editId);
@@ -124,13 +124,26 @@ function updateURLForModal(modalId) {
             window.history.replaceState({}, '', currentURL.toString());
         }
     } else if (modalId === 'viewInvoiceModal') {
-        // Extract ID from the modal content
-        const detailElement = modal?.querySelector('.detail-value');
-        const drNumber = detailElement?.textContent?.trim();
-        if (drNumber) {
-            currentURL.searchParams.set('view', drNumber);
+        // Get ID from the modal's data attribute or from the URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewId = urlParams.get('view');
+        
+        if (viewId) {
+            currentURL.searchParams.set('view', viewId);
             currentURL.searchParams.delete('edit');
             window.history.replaceState({}, '', currentURL.toString());
+        } else {
+            // Alternative: Try to get ID from the Edit button link in the modal
+            const editLink = modal?.querySelector('a[href*="?edit="]');
+            if (editLink) {
+                const href = editLink.getAttribute('href');
+                const match = href.match(/edit=(\d+)/);
+                if (match && match[1]) {
+                    currentURL.searchParams.set('view', match[1]);
+                    currentURL.searchParams.delete('edit');
+                    window.history.replaceState({}, '', currentURL.toString());
+                }
+            }
         }
     }
 }
@@ -571,6 +584,15 @@ function checkAndShowModalsFromURL() {
         // Clean URL since modal doesn't exist
         cleanURL();
     }
+}
+
+function formatPrice(input) {
+    let value = input.value.replace(/[^0-9]/g, '');
+    if (value === '') {
+        input.value = '';
+        return;
+    }
+    input.value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 function setupButtonVisibility() {

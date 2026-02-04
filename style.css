@@ -640,7 +640,8 @@ body.modal-open {
 .dr-invoice-section,
 .dr-with-price-section,
 .used-dr-section,
-.pullout-machine-section {
+.pullout-machine-section,
+.pulloutandreplacement-section {
     margin-top: 20px;
     padding: 20px;
     background: #f8f9fa;
@@ -654,8 +655,8 @@ body.modal-open {
 .dr-invoice-section h4,
 .dr-with-price-section h4,
 .used-dr-section h4,
-.pullout-machine-section h4 {
-    margin-bottom: 15px;
+.pullout-machine-section h4,
+.pulloutandreplacement-section h4 {
     color: #2c3e50;
     font-size: 18px;
     display: flex;
@@ -722,6 +723,7 @@ body.modal-open {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
+    border-bottom: 1px solid #eee;
 }
 
 @media (max-width: 768px) {
