@@ -68,6 +68,12 @@ if ($stmt) {
     $activities = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 }
 
+// Get the maximum ID for tracking new records
+$max_id_query = "SELECT MAX(id) as max_id FROM history";
+$max_id_result = $conn->query($max_id_query);
+$max_id_row = $max_id_result->fetch_assoc();
+$latest_id = $max_id_row['max_id'] ?? 0;
+
 $conn->close();
 ?>
 
@@ -82,10 +88,12 @@ $conn->close();
     <link rel="stylesheet" href="HistoryStyle.css">
     <style>
         .highlight {
-            background-color: yellow;
+            background-color: #ffeb3b;
+            color: #000;
             font-weight: bold;
-            padding: 1px 2px;
+            padding: 0 2px;
             border-radius: 2px;
+            box-shadow: 0 0 0 1px rgba(255, 235, 59, 0.3);
         }
 
         .pagination-controls {
@@ -164,6 +172,46 @@ $conn->close();
             border-radius: 4px;
             font-size: 14px;
         }
+
+        /* New record highlight animation */
+        .new-record-highlight {
+            animation: highlightPulse 3s ease-in-out;
+        }
+
+        @keyframes highlightPulse {
+            0% {
+                background-color: rgba(102, 126, 234, 0.3);
+            }
+
+            100% {
+                background-color: transparent;
+            }
+        }
+
+        /* Notification animations */
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 
@@ -215,7 +263,6 @@ $conn->close();
             <table class="activity-table" id="activityTable">
                 <thead>
                     <tr>
-                        <!-- <th>ID</th> -->
                         <th>SI Number</th>
                         <th>DR Number</th>
                         <th>Delivered To</th>
@@ -281,7 +328,6 @@ $conn->close();
             </div>
         </div>
     </div>
-
     <script>
         // ============================================
         // MAIN JS - CLIENT-SIDE SEARCH & FILTERING
@@ -346,6 +392,9 @@ $conn->close();
             updatePaginationInfo();
             setupPagination();
 
+            // Start real-time updates
+            connectToEventSource();
+
             console.log('Initialization complete');
         });
 
@@ -369,40 +418,30 @@ $conn->close();
                 dateToValue: dateToValue
             });
 
-            filteredActivities = allActivities.filter(activity => {
-                // Debug each activity
-                console.log('Checking activity:', {
-                    id: activity.id,
-                    date: activity.date,
-                    type: activity.type,
-                    searchableText: activity.searchableText.substring(0, 50) + '...'
-                });
+            // Clear all highlights before applying new filter
+            removeAllHighlights();
 
+            filteredActivities = allActivities.filter(activity => {
                 // Search filter
                 if (searchTerm && !activity.searchableText.includes(searchTerm)) {
-                    console.log(`Activity ${activity.id} filtered out by search`);
                     return false;
                 }
 
                 // Type filter
                 if (typeValue && activity.type !== typeValue) {
-                    console.log(`Activity ${activity.id} filtered out by type`);
                     return false;
                 }
 
                 // Date range filter
                 if (activity.date) {
                     if (dateFromValue && activity.date < dateFromValue) {
-                        console.log(`Activity ${activity.id} filtered out by dateFrom: ${activity.date} < ${dateFromValue}`);
                         return false;
                     }
                     if (dateToValue && activity.date > dateToValue) {
-                        console.log(`Activity ${activity.id} filtered out by dateTo: ${activity.date} > ${dateToValue}`);
                         return false;
                     }
                 }
 
-                console.log(`Activity ${activity.id} passed all filters`);
                 return true;
             });
 
@@ -412,7 +451,52 @@ $conn->close();
             displayPage(currentPage);
             updatePaginationInfo();
             updatePaginationControls();
-            highlightSearchTerm(searchTerm);
+
+            // Apply highlights if search term exists
+            if (searchTerm) {
+                highlightSearchTerm(searchTerm);
+            }
+        }
+
+        function removeAllHighlights() {
+            allActivities.forEach(activity => {
+                const cells = activity.element.querySelectorAll('td');
+                cells.forEach(cell => {
+                    const highlightSpans = cell.querySelectorAll('.highlight');
+                    highlightSpans.forEach(span => {
+                        // Replace highlight span with just its text content
+                        const textNode = document.createTextNode(span.textContent);
+                        span.parentNode.replaceChild(textNode, span);
+                    });
+                    // Normalize text nodes to merge adjacent text nodes
+                    cell.normalize();
+                });
+            });
+        }
+
+        function highlightSearchTerm(searchTerm) {
+            if (!searchTerm) return;
+
+            const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+
+            filteredActivities.forEach(activity => {
+                const cells = activity.element.querySelectorAll('td');
+                cells.forEach((cell, index) => {
+                    // Skip action column (last column)
+                    if (index === cells.length - 1) return;
+
+                    // Get current text content
+                    const textContent = cell.textContent;
+
+                    // Create highlighted version
+                    const highlighted = textContent.replace(regex, '<span class="highlight">$1</span>');
+
+                    // Only update if changes were made
+                    if (highlighted !== textContent) {
+                        cell.innerHTML = highlighted;
+                    }
+                });
+            });
         }
 
         function displayPage(page) {
@@ -606,55 +690,14 @@ $conn->close();
             goToPage(totalPages);
         }
 
-        function highlightSearchTerm(searchTerm) {
-            if (searchTerm === '') {
-                // Remove highlights
-                allActivities.forEach(activity => {
-                    const cells = activity.element.querySelectorAll('td');
-                    cells.forEach(cell => {
-                        if (cell.dataset.originalHtml) {
-                            cell.innerHTML = cell.dataset.originalHtml;
-                        }
-                    });
-                });
-                return;
-            }
-
-            const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
-
-            filteredActivities.forEach(activity => {
-                const cells = activity.element.querySelectorAll('td');
-                cells.forEach((cell, index) => {
-                    // Skip action column (last column)
-                    if (index === cells.length - 1) return;
-
-                    const originalHtml = cell.dataset.originalHtml || cell.innerHTML;
-                    const container = document.createElement('div');
-                    container.innerHTML = originalHtml;
-
-                    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-                    let node;
-                    let changed = false;
-                    while ((node = walker.nextNode())) {
-                        if (regex.test(node.nodeValue)) {
-                            const replaced = node.nodeValue.replace(regex, '<span class="highlight">$1</span>');
-                            const temp = document.createElement('span');
-                            temp.innerHTML = replaced;
-                            const frag = document.createDocumentFragment();
-                            while (temp.firstChild) frag.appendChild(temp.firstChild);
-                            node.parentNode.replaceChild(frag, node);
-                            changed = true;
-                        }
-                        regex.lastIndex = 0;
-                    }
-
-                    cell.innerHTML = changed ? container.innerHTML : originalHtml;
-                });
-            });
-        }
-
         function escapeRegExp(string) {
             return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         function viewDetails(activity) {
@@ -702,6 +745,308 @@ $conn->close();
 
             document.body.appendChild(modal);
         }
+
+        // ============================================
+        // REAL-TIME UPDATES WITH SSE
+        // ============================================
+        let eventSource = null;
+        let latestId = <?php echo $latest_id; ?>;
+        let isUpdating = false;
+        let updateQueue = [];
+
+        function connectToEventSource() {
+            // Close existing connection if any
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            // Create new EventSource connection
+            eventSource = new EventSource(`history_updates.php?last_id=${latestId}`);
+
+            eventSource.onopen = function() {
+                console.log('SSE Connection opened');
+                showNotification('Connected to real-time updates', 'success');
+            };
+
+            eventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'new_records') {
+                        console.log(`Received ${data.count} new records`);
+                        processNewRecords(data.data);
+                        if (data.count > 0) {
+                            showNotification(`New ${data.count} record(s) added`, 'info');
+                        }
+                    } else if (data.type === 'heartbeat') {
+                        console.log('Heartbeat received:', data.timestamp);
+                    }
+
+                    // Update latest ID
+                    if (event.lastEventId) {
+                        latestId = Math.max(latestId, parseInt(event.lastEventId));
+                    }
+                } catch (error) {
+                    console.error('Error processing SSE message:', error);
+                }
+            };
+
+            eventSource.onerror = function(error) {
+                console.error('SSE Error:', error);
+                showNotification('Connection lost. Reconnecting...', 'warning');
+
+                // Try to reconnect after 5 seconds
+                setTimeout(() => {
+                    if (eventSource.readyState === EventSource.CLOSED) {
+                        connectToEventSource();
+                    }
+                }, 5000);
+            };
+        }
+
+        function processNewRecords(newRecords) {
+            // Add to queue if currently updating
+            if (isUpdating) {
+                updateQueue.push(...newRecords);
+                return;
+            }
+
+            isUpdating = true;
+
+            // Process records in batches for better performance
+            const batchSize = 5;
+            let index = 0;
+
+            function processBatch() {
+                const batch = newRecords.slice(index, index + batchSize);
+
+                batch.forEach(record => {
+                    addRecordToTable(record);
+                });
+
+                // Update allActivities array
+                batch.forEach(record => {
+                    // Create row element (will be populated in addRecordToTable)
+                    const activity = {
+                        id: record.id.toString(),
+                        searchableText: (
+                            (record.si_number || '') + ' ' +
+                            (record.dr_number || '') + ' ' +
+                            (record.delivered_to || '') + ' ' +
+                            (record.particulars || '') + ' ' +
+                            (record.type || '') + ' ' +
+                            (record.status || '')
+                        ).toLowerCase(),
+                        type: record.type || '',
+                        date: record.si_date ? record.si_date.split(' ')[0] : '',
+                        element: null // Will be set by addRecordToTable
+                    };
+
+                    allActivities.unshift(activity); // Add to beginning
+                });
+
+                index += batchSize;
+
+                if (index < newRecords.length) {
+                    // Process next batch
+                    setTimeout(processBatch, 100);
+                } else {
+                    // Update filtered activities and pagination
+                    filterTable();
+
+                    // Process queued updates
+                    if (updateQueue.length > 0) {
+                        const queued = [...updateQueue];
+                        updateQueue = [];
+                        setTimeout(() => {
+                            processNewRecords(queued);
+                        }, 500);
+                    }
+
+                    isUpdating = false;
+                }
+            }
+
+            processBatch();
+        }
+
+        function addRecordToTable(record) {
+            const tableBody = document.getElementById('tableBody');
+            const existingEmptyRow = document.getElementById('emptyStateRow');
+
+            // Remove empty state row if present
+            if (existingEmptyRow) {
+                existingEmptyRow.remove();
+            }
+
+            // Format dates
+            const display_date = record.si_date ?
+                new Date(record.si_date).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                }) : '';
+            const data_date = record.si_date ? record.si_date.split(' ')[0] : '';
+
+            // Create new row
+            const newRow = document.createElement('tr');
+            newRow.className = 'new-record-highlight';
+            newRow.dataset.id = record.id;
+            newRow.dataset.searchable = (
+                (record.si_number || '') + ' ' +
+                (record.dr_number || '') + ' ' +
+                (record.delivered_to || '') + ' ' +
+                (record.particulars || '') + ' ' +
+                (record.type || '') + ' ' +
+                (record.status || '')
+            ).toLowerCase();
+            newRow.dataset.type = record.type || '';
+            newRow.dataset.date = data_date;
+
+            // Store original HTML for cells
+            const cellsHtml = `
+                <td><strong class="si-number">${escapeHtml(record.si_number || '')}</strong></td>
+                <td><strong class="dr-number">${escapeHtml(record.dr_number || '')}</strong></td>
+                <td class="delivered-to">${escapeHtml(record.delivered_to || '')}</td>
+                <td class="si-date">${escapeHtml(display_date)}</td>
+                <td>
+                    <span class="action-badge badge-view">
+                        <i class="fas fa-cogs"></i>
+                        ${escapeHtml(record.type || '')}
+                    </span>
+                </td>
+                <td class="time-cell">
+                    <span class="date">${new Date(record.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    <span class="time">${new Date(record.created_at).toLocaleTimeString('en-US', { hour12: false })}</span>
+                </td>
+                <td>
+                    ${record.status ? `
+                        <span class="action-badge badge-view">
+                            <i class="fa-solid fa-file"></i>
+                            <strong>${escapeHtml(record.status)}</strong>
+                        </span>
+                    ` : ''}
+                </td>
+                <td>
+                    <button class="btn-view-details" onclick="viewDetails(${escapeHtml(JSON.stringify(record))})">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                </td>
+            `;
+
+            newRow.innerHTML = cellsHtml;
+
+            // Insert at the top of the table
+            if (tableBody.firstChild) {
+                tableBody.insertBefore(newRow, tableBody.firstChild);
+            } else {
+                tableBody.appendChild(newRow);
+            }
+
+            // Apply current search highlights to the new row if needed
+            const searchInput = document.getElementById('searchInput');
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            if (searchTerm) {
+                const cells = newRow.querySelectorAll('td');
+                const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+
+                cells.forEach((cell, index) => {
+                    if (index === cells.length - 1) return; // Skip action column
+                    const textContent = cell.textContent;
+                    const highlighted = textContent.replace(regex, '<span class="highlight">$1</span>');
+                    if (highlighted !== textContent) {
+                        cell.innerHTML = highlighted;
+                    }
+                });
+            }
+
+            // Add animation effect
+            setTimeout(() => {
+                newRow.classList.remove('new-record-highlight');
+            }, 3000);
+
+            // Add to allActivities array
+            const activity = {
+                element: newRow,
+                searchableText: newRow.dataset.searchable,
+                type: record.type || '',
+                date: data_date,
+                id: record.id.toString()
+            };
+
+            // Check if already exists (shouldn't happen, but just in case)
+            const existingIndex = allActivities.findIndex(a => a.id === record.id.toString());
+            if (existingIndex !== -1) {
+                allActivities[existingIndex] = activity;
+            } else {
+                allActivities.unshift(activity);
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            // Remove existing notification
+            const existingNotification = document.querySelector('.live-notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            // Create notification
+            const notification = document.createElement('div');
+            notification.className = `live-notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()" class="notification-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            // Style the notification
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.right = '20px';
+            notification.style.background = type === 'success' ? '#4caf50' : type === 'warning' ? '#ff9800' : '#2196f3';
+            notification.style.color = 'white';
+            notification.style.padding = '12px 20px';
+            notification.style.borderRadius = '4px';
+            notification.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+            notification.style.zIndex = '10000';
+            notification.style.display = 'flex';
+            notification.style.alignItems = 'center';
+            notification.style.gap = '10px';
+            notification.style.fontSize = '14px';
+            notification.style.minWidth = '300px';
+            notification.style.maxWidth = '400px';
+            notification.style.animation = 'slideIn 0.3s ease-out';
+
+            // Add close button styles
+            notification.querySelector('.notification-close').style.background = 'none';
+            notification.querySelector('.notification-close').style.border = 'none';
+            notification.querySelector('.notification-close').style.color = 'white';
+            notification.querySelector('.notification-close').style.cursor = 'pointer';
+            notification.querySelector('.notification-close').style.marginLeft = 'auto';
+
+            document.body.appendChild(notification);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.animation = 'slideOut 0.3s ease-out';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.remove();
+                        }
+                    }, 300);
+                }
+            }, 5000);
+        }
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (eventSource) {
+                eventSource.close();
+            }
+        });
     </script>
 </body>
 
