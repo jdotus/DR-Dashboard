@@ -43,46 +43,7 @@ function getRelatedRecords($conn, $table, $dr_number)
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['action'])) {
-        if ($_POST['action'] == 'add') {
-            // Add new invoice
-            $stmt = $conn->prepare("INSERT INTO main (si_number, dr_number, delivered_to, tin, address, terms, particulars, si_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param(
-                "ssssssss",
-                $_POST['si_number'],
-                $_POST['dr_number'],
-                $_POST['delivered_to'],
-                $_POST['tin'],
-                $_POST['address'],
-                $_POST['terms'],
-                $_POST['particulars'],
-                $_POST['si_date']
-            );
-
-            if ($stmt->execute()) {
-                $main_id = $stmt->insert_id;
-
-                // Check if bnew_machine data was submitted
-                if (isset($_POST['bnew_unit_type']) && is_array($_POST['bnew_unit_type'])) {
-                    for ($i = 0; $i < count($_POST['bnew_unit_type']); $i++) {
-                        $stmt_bnew = $conn->prepare("INSERT INTO bnew_machine (main_id, unit_type, machine_model, serial_no) VALUES (?, ?, ?, ?)");
-                        $stmt_bnew->bind_param(
-                            "isss",
-                            $main_id,
-                            $_POST['bnew_unit_type'][$i],
-                            $_POST['bnew_machine_model'][$i],
-                            $_POST['bnew_serial_no'][$i]
-                        );
-                        $stmt_bnew->execute();
-                        $stmt_bnew->close();
-                    }
-                }
-
-                $success_message = "Invoice added successfully!";
-            } else {
-                $error_message = "Error adding invoice: " . $stmt->error;
-            }
-            $stmt->close();
-        } elseif ($_POST['action'] == 'update') {
+        if ($_POST['action'] == 'update') {
             // Start transaction for update
             $conn->begin_transaction();
 
@@ -200,9 +161,47 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     case 'bnew':
                         // Insert bnew_machine records if they exist
                         if (isset($_POST['bnew_unit_type']) && is_array($_POST['bnew_unit_type'])) {
+
+                            // Inserting to the history table
+                            $stmntHistory = $conn->prepare("INSERT INTO historyv2 (si_number, dr_number, delivered_to, tin, address, terms, particulars, si_date, type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'UPDATED')");
+                            $stmntHistory->bind_param(
+                                "sssssssss",
+                                $_POST['si_number'],
+                                $_POST['dr_number'],
+                                $_POST['delivered_to'],
+                                $_POST['tin'],
+                                $_POST['address'],
+                                $_POST['terms'],
+                                $_POST['particulars'],
+                                $_POST['si_date'],
+                                $current_type
+                            );
+
+                            $stmntHistory->execute();
+                            $stmntHistory->close();
+
                             for ($i = 0; $i < count($_POST['bnew_unit_type']); $i++) {
                                 if (!empty($_POST['bnew_unit_type'][$i])) {
                                     $stmt_bnew = $conn->prepare("INSERT INTO bnew_machine (dr_number, unit_type, machine_model, serial_no) VALUES (?, ?, ?, ?)");
+
+                                    $stmntHistoryPart2 = $conn->prepare("
+                                    UPDATE historyv2 
+                                    SET unit_type = ?,
+                                    machine_model = ?,
+                                    serial_no = ?
+                                    WHERE dr_number = ?");
+
+                                    $stmntHistoryPart2->bind_param(
+                                        "ssss",
+                                        $_POST['bnew_unit_type'][$i],
+                                        $_POST['bnew_machine_model'][$i],
+                                        $_POST['bnew_serial_no'][$i],
+                                        $dr_number
+                                    );
+
+                                    $stmntHistoryPart2->execute();
+                                    $stmntHistoryPart2->close();
+
                                     $stmt_bnew->bind_param(
                                         "ssss",
                                         $dr_number,
@@ -459,44 +458,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $error_message = "Error updating invoice: " . $e->getMessage();
             }
         }
-    } elseif ($_POST['action'] == 'delete') {
-        // Delete invoice and related records
-        $main_id = intval($_POST['id']);
-
-        // Start transaction
-        $conn->begin_transaction();
-
-        try {
-            // Delete from all related tables first using prepared statements
-            $tables = [
-                'bnew_machine',
-                'dr_invoice',
-                'dr_with_price',
-                'pullout_machine',
-                'replacement_machine',
-                'used_dr',
-                'used_machine'
-            ];
-
-            foreach ($tables as $table) {
-                $delete_stmt = $conn->prepare("DELETE FROM $table WHERE main_id = ?");
-                $delete_stmt->bind_param("i", $main_id);
-                $delete_stmt->execute();
-                $delete_stmt->close();
-            }
-
-            // Delete from main table
-            $stmt = $conn->prepare("DELETE FROM main WHERE id = ?");
-            $stmt->bind_param("i", $main_id);
-            $stmt->execute();
-            $stmt->close();
-
-            $conn->commit();
-            $success_message = "Invoice deleted successfully!";
-        } catch (Exception $e) {
-            $conn->rollback();
-            $error_message = "Error deleting invoice: " . $e->getMessage();
-        }
     }
 
     // Refresh to show updated data
@@ -718,7 +679,6 @@ $stmt_bnew->close();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="style.css">
     <script src="./Mainscript.js"></script>
-    <!-- <script src="./autoreload.js"></script> -->
 </head>
 
 <body>

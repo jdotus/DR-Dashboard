@@ -279,3 +279,39 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+CREATE TABLE historyV2 (
+	-- For the main table information.
+	id int not null PRIMARY KEY AUTO_INCREMENT,
+    si_number varchar(50) NOT NULL,
+    dr_number varchar(50) NOT NULL,
+    delivered_to varchar(200) NOT NULL,
+    tin varchar(50) DEFAULT NULL,
+    address text DEFAULT NULL,
+    terms varchar(100) DEFAULT NULL,
+    particulars text DEFAULT NULL,
+    si_date date NOT NULL,
+    type varchar(100) NOT NULL,
+    created_at datetime NOT NULL DEFAULT current_timestamp(),
+    
+    -- For Brandnew Machine
+    id int(11) NOT NULL,
+    dr_number varchar(250) NOT NULL,
+    unit_type varchar(50) NOT NULL,
+    machine_model varchar(150) NOT NULL,
+    serial_no text DEFAULT NULL,
+    -- created_at datetime DEFAULT current_timestamp()
+    quantity int(11) NOT NULL,
+    machine_model varchar(100) DEFAULT NULL,
+    under_po_no varchar(100) DEFAULT NULL,
+    under_invoice_no varchar(100) DEFAULT NULL,
+    note text DEFAULT NULL,
+    delivery_type enum('partial','complete') DEFAULT 'complete',
+    unit_type varchar(50) DEFAULT NULL,
+    item_description text NOT NULL,
+     `mr_start` varchar(50) DEFAULT NULL,
+  `color_impression` varchar(150) DEFAULT NULL,
+  `black_impression` varchar(150) DEFAULT NULL,
+  `color_large_impression` varchar(150) DEFAULT NULL,
+	
+);

@@ -20,7 +20,7 @@ $date_to = $_GET['date_to'] ?? '';
 $type = $_GET['type'] ?? '';
 
 // Build query with filters
-$query = "SELECT * FROM history WHERE 1=1";
+$query = "SELECT * FROM historyv2 WHERE 1=1 ";
 $params = [];
 $types = "";
 
@@ -301,10 +301,17 @@ $conn->close();
                             </td>
                             <td>
                                 <?php if (!empty($activity['status'])): ?>
-                                    <span class="action-badge badge-view">
-                                        <i class="fa-solid fa-file"></i>
-                                        <strong><?php echo htmlspecialchars($activity['status']); ?></strong>
-                                    </span>
+                                    <?php if ($activity['status'] === 'updated'): ?>
+                                        <span class="action-badge badge-view">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                            <strong><?php echo htmlspecialchars($activity['status']); ?></strong>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="action-badge badge-view">
+                                            <i class="fa-solid fa-file"></i>
+                                            <strong><?php echo htmlspecialchars($activity['status']); ?></strong>
+                                        </span>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </td>
                             <td>
@@ -701,18 +708,494 @@ $conn->close();
         }
 
         function viewDetails(activity) {
+
+            // This function will display the details of the activity in an alert for simplicity.
             let details = `ID: ${activity.id}\n`;
-            details += `SI Number: ${activity.si_number}\n`;
-            details += `DR Number: ${activity.dr_number}\n`;
-            details += `Delivered To: ${activity.delivered_to}\n`;
-            details += `TIN: ${activity.tin}\n`;
-            details += `Address: ${activity.address}\n`;
-            details += `Terms: ${activity.terms}\n`;
-            details += `SI Date: ${activity.si_date}\n`;
-            details += `Type: ${activity.type}\n`;
-            if (activity.status) details += `Status: ${activity.status}\n`;
-            details += `Created At: ${activity.created_at}\n\n`;
-            details += `Particulars:\n${activity.particulars}`;
+            if (activity.type === 'bnew') {
+                details += `SI Number: ${activity.si_number}\n`;
+                details += `DR Number: ${activity.dr_number}\n`;
+                details += `Delivered To: ${activity.delivered_to}\n`;
+                details += `TIN: ${activity.tin}\n`;
+                details += `Address: ${activity.address}\n`;
+                details += `Terms: ${activity.terms}\n`;
+                details += `SI Date: ${activity.si_date}\n`;
+                details += `Type: ${activity.type}\n`;
+                if (activity.status) details += `Status: ${activity.status}\n`;
+                details += `Created At: ${activity.created_at}\n`;
+                details += `Particulars:${activity.particulars}\n\n`;
+
+                details += `Unit Type: ${activity.unit_type}\n`;
+                details += `Serials : ${activity.serial_no}\n`;
+                details += `Machine Model: ${activity.machine_model}\n`;
+            } else if (activity.type === 'usedmachine') {
+                details += `SI Number: ${activity.si_number}\n`;
+                details += `DR Number: ${activity.dr_number}\n`;
+                details += `Delivered To: ${activity.delivered_to}\n`;
+                details += `TIN: ${activity.tin}\n`;
+                details += `Address: ${activity.address}\n`;
+                details += `Terms: ${activity.terms}\n`;
+                details += `SI Date: ${activity.si_date}\n`;
+                details += `Type: ${activity.type}\n`;
+                if (activity.status) details += `Status: ${activity.status}\n`;
+                details += `Created At: ${activity.created_at}\n`;
+                details += `Particulars:${activity.particulars}\n\n`;
+
+                // Split comma-separated values and list them individually
+                const listify = (str) => (str || '').split(',').map(s => s.trim()).filter(Boolean);
+
+                const models = listify(activity.machine_model);
+                const serials = listify(activity.serial_no);
+                const mrStarts = listify(activity.mr_start);
+                const colorImps = listify(activity.color_impression);
+                const blackImps = listify(activity.black_impression);
+                const colorLargeImps = listify(activity.color_large_impression);
+
+                // Check if we have any data
+                if (models.length || mrStarts.length || colorImps.length || blackImps.length || colorLargeImps.length) {
+                    details += `Machine Details:\n`;
+
+                    // Determine the maximum number of items
+                    const maxItems = Math.max(
+                        models.length,
+                        serials.length,
+                        mrStarts.length,
+                        colorImps.length,
+                        blackImps.length,
+                        colorLargeImps.length
+                    );
+
+                    // Loop through each set
+                    for (let i = 0; i < maxItems; i++) {
+                        // Add model if exists
+                        if (models[i]) {
+                            details += `${models[i]}`;
+                        }
+
+                        if (serials[i]) {
+                            details += `\nSerial: ${serials[i]}`;
+                        } else {
+                            details += `\nSerial: 0`;
+                        }
+
+                        // Add MR Start if exists
+                        if (mrStarts[i]) {
+                            details += `\nMR Start: ${mrStarts[i]}`;
+                        } else {
+                            details += `\nMR Start: 0`;
+                        }
+
+                        // Add Color Impression if exists
+                        if (colorImps[i]) {
+                            details += `\nColor: ${colorImps[i]}`;
+                        } else {
+                            details += `\nColor: 0`;
+                        }
+
+                        // Add Black Impression if exists
+                        if (blackImps[i]) {
+                            details += `\nBlack: ${blackImps[i]}`;
+                        } else {
+                            details += `\nBlack: 0`;
+                        }
+
+                        // Add Color Large Impression if exists
+                        if (colorLargeImps[i]) {
+                            details += `\nColor Large: ${colorLargeImps[i]}`;
+                        } else {
+                            details += `\nColor Large: 0`;
+                        }
+
+                        details += `\n`;
+                    }
+                }
+            } else if (activity.type === 'replacementmachine') {
+                details += `SI Number: ${activity.si_number}\n`;
+                details += `DR Number: ${activity.dr_number}\n`;
+                details += `Delivered To: ${activity.delivered_to}\n`;
+                details += `TIN: ${activity.tin}\n`;
+                details += `Address: ${activity.address}\n`;
+                details += `Terms: ${activity.terms}\n`;
+                details += `SI Date: ${activity.si_date}\n`;
+                details += `Type: ${activity.type}\n`;
+                if (activity.status) details += `Status: ${activity.status}\n`;
+                details += `Created At: ${activity.created_at}\n`;
+                details += `Particulars:${activity.particulars}\n\n`;
+
+                // Split comma-separated values and list them individually
+                const listify = (str) => (str || '').split(',').map(s => s.trim()).filter(Boolean);
+
+                const models = listify(activity.machine_model);
+                const serials = listify(activity.serial_no);
+                const mrStarts = listify(activity.mr_start);
+                const colorImps = listify(activity.color_impression);
+                const blackImps = listify(activity.black_impression);
+                const colorLargeImps = listify(activity.color_large_impression);
+
+                // Check if we have any data
+                if (models.length || mrStarts.length || colorImps.length || blackImps.length || colorLargeImps.length) {
+                    details += `Machine Details:\n`;
+
+                    // Determine the maximum number of items
+                    const maxItems = Math.max(
+                        models.length,
+                        serials.length,
+                        mrStarts.length,
+                        colorImps.length,
+                        blackImps.length,
+                        colorLargeImps.length
+                    );
+
+                    // Loop through each set
+                    for (let i = 0; i < maxItems; i++) {
+
+
+                        if (models[i]) {
+                            details += `---------------\n`;
+                            // Add model if exists
+                            if (models[i]) {
+                                details += `${models[i]}`;
+                            }
+
+                            if (serials[i]) {
+                                details += `\nSerial: ${serials[i]}`;
+                            }
+
+                            // Add MR Start if exists
+                            if (mrStarts[i]) {
+                                details += `\nMR Start: ${mrStarts[i]}`;
+                            } else {
+                                details += `\nMR Start: 0`;
+                            }
+
+                            // Add Color Impression if exists
+                            if (colorImps[i]) {
+                                details += `\nColor: ${colorImps[i]}`;
+                            } else {
+                                details += `\nColor: 0`;
+                            }
+
+                            // Add Black Impression if exists
+                            if (blackImps[i]) {
+                                details += `\nBlack: ${blackImps[i]}`;
+                            } else {
+                                details += `\nBlack: 0`;
+                            }
+
+                            // Add Color Large Impression if exists
+                            if (colorLargeImps[i]) {
+                                details += `\nColor Large: ${colorLargeImps[i]}`;
+                            } else {
+                                details += `\nColor Large: 0`;
+                            }
+
+                            details += `\n`;
+
+                        } else {
+
+                            // Add model if exists
+                            if (models[i]) {
+                                details += `${models[i]}`;
+                            }
+
+                            if (serials[i]) {
+                                details += `\nSerial: ${serials[i]}`;
+                            }
+
+
+                            // Add MR Start if exists
+                            if (mrStarts[i]) {
+                                details += `\nMR Start: ${mrStarts[i]}`;
+                            } else {
+                                details += `\nMR Start: 0`;
+                            }
+
+                            // Add Color Impression if exists
+                            if (colorImps[i]) {
+                                details += `\nColor: ${colorImps[i]}`;
+                            } else {
+                                details += `\nColor: 0`;
+                            }
+
+                            // Add Black Impression if exists
+                            if (blackImps[i]) {
+                                details += `\nBlack: ${blackImps[i]}`;
+                            } else {
+                                details += `\nBlack: 0`;
+                            }
+
+                            // Add Color Large Impression if exists
+                            if (colorLargeImps[i]) {
+                                details += `\nColor Large: ${colorLargeImps[i]}`;
+                            } else {
+                                details += `\nColor Large: 0`;
+                            }
+
+                            details += `\n`;
+                        }
+
+                    }
+                }
+            } else if (activity.type === 'pulloutmachine') {
+                details += `SI Number: ${activity.si_number}\n`;
+                details += `DR Number: ${activity.dr_number}\n`;
+                details += `Delivered To: ${activity.delivered_to}\n`;
+                details += `TIN: ${activity.tin}\n`;
+                details += `Address: ${activity.address}\n`;
+                details += `Terms: ${activity.terms}\n`;
+                details += `SI Date: ${activity.si_date}\n`;
+                details += `Type: ${activity.type}\n`;
+                if (activity.status) details += `Status: ${activity.status}\n`;
+                details += `Created At: ${activity.created_at}\n`;
+                details += `Particulars:${activity.particulars}\n\n`;
+
+                // Split comma-separated values and list them individually
+                const listify = (str) => (str || '').split(',').map(s => s.trim()).filter(Boolean);
+
+                const models = listify(activity.machine_model);
+                const serials = listify(activity.serial_no);
+                const mrEnds = listify(activity.mr_end);
+                const colorImps = listify(activity.color_impression);
+                const blackImps = listify(activity.black_impression);
+                const colorLargeImps = listify(activity.color_large_impression);
+
+                // Check if we have any data
+                if (models.length || mrStarts.length || colorImps.length || blackImps.length || colorLargeImps.length) {
+                    details += `Machine Details:\n`;
+
+                    // Determine the maximum number of items
+                    const maxItems = Math.max(
+                        models.length,
+                        serials.length,
+                        mrEnds.length,
+                        colorImps.length,
+                        blackImps.length,
+                        colorLargeImps.length
+                    );
+
+                    // Loop through each set
+                    for (let i = 0; i < maxItems; i++) {
+
+
+                        if (models[i]) {
+                            details += `---------------\n`;
+                            // Add model if exists
+                            if (models[i]) {
+                                details += `${models[i]}`;
+                            }
+
+                            if (serials[i]) {
+                                details += `\nSerial: ${serials[i]}`;
+                            }
+
+                            if (mrEnds[i]) {
+                                details += `\nMR End: ${mrEnds[i]}`;
+                            } else {
+                                details += `\nMR End: 0`;
+                            }
+
+                            // Add Color Impression if exists
+                            if (colorImps[i]) {
+                                details += `\nColor: ${colorImps[i]}`;
+                            } else {
+                                details += `\nColor: 0`;
+                            }
+
+                            // Add Black Impression if exists
+                            if (blackImps[i]) {
+                                details += `\nBlack: ${blackImps[i]}`;
+                            } else {
+                                details += `\nBlack: 0`;
+                            }
+
+                            // Add Color Large Impression if exists
+                            if (colorLargeImps[i]) {
+                                details += `\nColor Large: ${colorLargeImps[i]}`;
+                            } else {
+                                details += `\nColor Large: 0`;
+                            }
+
+                            details += `\n`;
+
+                        } else {
+
+                            // Add model if exists
+                            if (models[i]) {
+                                details += `${models[i]}`;
+                            }
+
+                            if (serials[i]) {
+                                details += `\nSerial: ${serials[i]}`;
+                            }
+                            // Add MR End if exists
+                            if (mrEnds[i]) {
+                                details += `\nMR End: ${mrEnds[i]}`;
+                            } else {
+                                details += `\nMR End: 0`;
+                            }
+
+                            // Add Color Impression if exists
+                            if (colorImps[i]) {
+                                details += `\nColor: ${colorImps[i]}`;
+                            } else {
+                                details += `\nColor: 0`;
+                            }
+
+                            // Add Black Impression if exists
+                            if (blackImps[i]) {
+                                details += `\nBlack: ${blackImps[i]}`;
+                            } else {
+                                details += `\nBlack: 0`;
+                            }
+
+                            // Add Color Large Impression if exists
+                            if (colorLargeImps[i]) {
+                                details += `\nColor Large: ${colorLargeImps[i]}`;
+                            } else {
+                                details += `\nColor Large: 0`;
+                            }
+
+                            details += `\n`;
+                        }
+
+                    }
+                }
+            } else if (activity.type === 'drwithprice') {
+                details += `SI Number: ${activity.si_number}\n`;
+                details += `DR Number: ${activity.dr_number}\n`;
+                details += `Delivered To: ${activity.delivered_to}\n`;
+                details += `TIN: ${activity.tin}\n`;
+                details += `Address: ${activity.address}\n`;
+                details += `Terms: ${activity.terms}\n`;
+                details += `SI Date: ${activity.si_date}\n`;
+                details += `Type: ${activity.type}\n`;
+                if (activity.status) details += `Status: ${activity.status}\n`;
+                details += `Created At: ${activity.created_at}\n`;
+                details += `Particulars:${activity.particulars}\n\n`;
+
+                details += `Item Details:\n\n`;
+
+                // Split comma-separated values and list them individually
+                const listify = (str) => (str || '').split(',').map(s => s.trim()).filter(Boolean);
+
+                const quantities = listify(activity.quantity);
+                const prices = listify(activity.price);
+                const totals = listify(activity.total);
+                const descriptions = listify(activity.item_description);
+
+                const maxItems = Math.max(quantities.length, prices.length, totals.length, descriptions.length);
+                var totalAmount = 0;
+
+                details += `Machine Model: ${activity.machine_model}\n`;
+                for (let i = 0; i < maxItems; i++) {
+                    if (descriptions[i]) {
+                        details += `Description: ${descriptions[i]}\n`;
+                    }
+                    if (quantities[i]) {
+                        details += `Quantity: ${quantities[i]}\n`;
+                    }
+                    if (prices[i]) {
+                        details += `Price: ${prices[i]}\n`;
+                    }
+                    if (totals[i]) {
+                        details += `Total: ${totals[i]}\n\n`;
+                    }
+
+                    totalAmount += parseFloat(totals[i]) || 0;
+                }
+
+                details += `\nGrand Total: ${totalAmount.toFixed(2)}\n`;
+
+            } else if (activity.type === 'drinvoice') {
+                details += `SI Number: ${activity.si_number}\n`;
+                details += `DR Number: ${activity.dr_number}\n`;
+                details += `Delivered To: ${activity.delivered_to}\n`;
+                details += `TIN: ${activity.tin}\n`;
+                details += `Address: ${activity.address}\n`;
+                details += `Terms: ${activity.terms}\n`;
+                details += `SI Date: ${activity.si_date}\n`;
+                details += `Type: ${activity.type}\n`;
+                if (activity.status) details += `Status: ${activity.status}\n`;
+                details += `Created At: ${activity.created_at}\n`;
+                details += `Particulars:${activity.particulars}\n\n`;
+
+                details += `Item Details:\n\n`;
+
+                const listify = (str) => (str || '').split(',').map(s => s.trim()).filter(Boolean);
+
+                const quantities = listify(activity.quantity);
+                const itemdescriptions = listify(activity.item_description);
+                const machineModels = listify(activity.machine_model);
+                const under_pos = listify(activity.under_po_no);
+                const under_invoice = listify(activity.under_invoice_no);
+                const notes = listify(activity.note);
+                const deliveries = listify(activity.delivered_type);
+
+                const maxItems = Math.max(quantities.length, itemdescriptions.length, machineModels.length, under_pos.length, under_invoice.length, notes.length, deliveries.length);
+
+                for (let i = 0; i < maxItems; i++) {
+                    if (machineModels[i]) {
+                        details += `Machine Model: ${machineModels[i]}\n`;
+                    }
+                    if (under_pos[i]) {
+                        details += `Under PO No: ${under_pos[i]}\n`;
+                    }
+                    if (under_invoice[i]) {
+                        details += `Under Invoice No: ${under_invoice[i]}\n`;
+                    }
+                    if (notes[i]) {
+                        details += `Notes: ${notes[i]}\n\n`;
+                    }
+
+
+                    if (itemdescriptions[i]) {
+                        details += `Description: ${itemdescriptions[i]}\n`;
+                    }
+                    if (quantities[i]) {
+                        details += `Quantity: ${quantities[i]}\n`;
+                    }
+                    if (deliveries[i]) {
+                        details += `Delivered Type: ${deliveries[i]}\n`;
+                    }
+                }
+
+            } else if (activity.type === 'useddr') {
+                details += `SI Number: ${activity.si_number}\n`;
+                details += `DR Number: ${activity.dr_number}\n`;
+                details += `Delivered To: ${activity.delivered_to}\n`;
+                details += `TIN: ${activity.tin}\n`;
+                details += `Address: ${activity.address}\n`;
+                details += `Terms: ${activity.terms}\n`;
+                details += `SI Date: ${activity.si_date}\n`;
+                details += `Type: ${activity.type}\n`;
+                if (activity.status) details += `Status: ${activity.status}\n`;
+                details += `Created At: ${activity.created_at}\n`;
+                details += `Particulars:${activity.particulars}\n\n`;
+
+                details += `Item Details:\n\n`;
+
+                const listify = (str) => (str || '').split(',').map(s => s.trim()).filter(Boolean);
+
+                const quantities = listify(activity.quantity);
+                const itemdescriptions = listify(activity.item_description);
+
+                const maxItems = Math.max(quantities.length, itemdescriptions.length);
+
+                details += `Machine Model: ${activity.machine_model}\n`;
+                details += `Serial No: ${activity.serial_no}\n`;
+                details += `MR Start: ${activity.mr_start}\n`;
+                details += `PR No: ${activity.pr_number}\n`;
+                details += `Technician: ${activity.technician_name}\n\n`;
+
+                for (let i = 0; i < maxItems; i++) {
+                    if (quantities[i]) {
+                        details += `Quantity: ${quantities[i]}\n`;
+                    }
+                    if (itemdescriptions[i]) {
+                        details += `Description: ${itemdescriptions[i]}\n`;
+                    }
+                }
+
+            }
 
             const modal = document.createElement('div');
             modal.style.position = 'fixed';
@@ -765,7 +1248,7 @@ $conn->close();
 
             eventSource.onopen = function() {
                 console.log('SSE Connection opened');
-                showNotification('Connected to real-time updates', 'success');
+                // showNotification('Connected to real-time updates', 'success');
             };
 
             eventSource.onmessage = function(event) {
@@ -776,7 +1259,7 @@ $conn->close();
                         console.log(`Received ${data.count} new records`);
                         processNewRecords(data.data);
                         if (data.count > 0) {
-                            showNotification(`New ${data.count} record(s) added`, 'info');
+                            // showNotification(`New ${data.count} record(s) added`, 'info');
                         }
                     } else if (data.type === 'heartbeat') {
                         console.log('Heartbeat received:', data.timestamp);
@@ -793,7 +1276,7 @@ $conn->close();
 
             eventSource.onerror = function(error) {
                 console.error('SSE Error:', error);
-                showNotification('Connection lost. Reconnecting...', 'warning');
+                // showNotification('Connection lost. Reconnecting...', 'warning');
 
                 // Try to reconnect after 5 seconds
                 setTimeout(() => {
@@ -981,64 +1464,6 @@ $conn->close();
             } else {
                 allActivities.unshift(activity);
             }
-        }
-
-        function showNotification(message, type = 'info') {
-            // Remove existing notification
-            const existingNotification = document.querySelector('.live-notification');
-            if (existingNotification) {
-                existingNotification.remove();
-            }
-
-            // Create notification
-            const notification = document.createElement('div');
-            notification.className = `live-notification ${type}`;
-            notification.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
-                <span>${message}</span>
-                <button onclick="this.parentElement.remove()" class="notification-close">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-
-            // Style the notification
-            notification.style.position = 'fixed';
-            notification.style.top = '20px';
-            notification.style.right = '20px';
-            notification.style.background = type === 'success' ? '#4caf50' : type === 'warning' ? '#ff9800' : '#2196f3';
-            notification.style.color = 'white';
-            notification.style.padding = '12px 20px';
-            notification.style.borderRadius = '4px';
-            notification.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-            notification.style.zIndex = '10000';
-            notification.style.display = 'flex';
-            notification.style.alignItems = 'center';
-            notification.style.gap = '10px';
-            notification.style.fontSize = '14px';
-            notification.style.minWidth = '300px';
-            notification.style.maxWidth = '400px';
-            notification.style.animation = 'slideIn 0.3s ease-out';
-
-            // Add close button styles
-            notification.querySelector('.notification-close').style.background = 'none';
-            notification.querySelector('.notification-close').style.border = 'none';
-            notification.querySelector('.notification-close').style.color = 'white';
-            notification.querySelector('.notification-close').style.cursor = 'pointer';
-            notification.querySelector('.notification-close').style.marginLeft = 'auto';
-
-            document.body.appendChild(notification);
-
-            // Auto-remove after 5 seconds
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.style.animation = 'slideOut 0.3s ease-out';
-                    setTimeout(() => {
-                        if (notification.parentNode) {
-                            notification.remove();
-                        }
-                    }, 300);
-                }
-            }, 5000);
         }
 
         // Clean up on page unload

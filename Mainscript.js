@@ -110,6 +110,7 @@ function showModal(modalId) {
         }
     }, 50);
 }
+
 // Update URL for modal state - FIXED VERSION
 function updateURLForModal(modalId) {
     const currentURL = new URL(window.location);
