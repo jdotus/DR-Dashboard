@@ -1195,6 +1195,91 @@ $conn->close();
                     }
                 }
 
+            } else if (activity.type === 'pulloutandreplacement') {
+                details += `SI Number: ${activity.si_number}\n`;
+                details += `DR Number: ${activity.dr_number}\n`;
+                details += `Delivered To: ${activity.delivered_to}\n`;
+                details += `TIN: ${activity.tin}\n`;
+                details += `Address: ${activity.address}\n`;
+                details += `Terms: ${activity.terms}\n`;
+                details += `SI Date: ${activity.si_date}\n`;
+                details += `Type: ${activity.type}\n`;
+                if (activity.status) details += `Status: ${activity.status}\n`;
+                details += `Created At: ${activity.created_at}\n`;
+                details += `Particulars:${activity.particulars}\n\n`;
+
+                details += `Item Details:\n\n`;
+
+                const listify = (str) => (str || '').split(',').map(s => s.trim()).filter(Boolean);
+                const machineModels = listify(activity.machine_model);
+                const serials = listify(activity.serial_no);
+                const unitTypes = listify(activity.unit_type);
+                const mrStarts = listify(activity.mr_start);
+                const mrEnds = listify(activity.mr_end);
+                const colorImps = listify(activity.color_impression);
+                const blackImps = listify(activity.black_impression);
+                const colorLargeImps = listify(activity.color_large_impression);
+
+                const maxSerials = Math.max(serials.length);
+                let replaceStart = 0;
+                let pulloutStart = 2;
+
+                details += `Replacement Machine Details: \n\n`;
+
+                for (let i = replaceStart; i < mrStarts.length; i++) {
+                    if (machineModels[i]) {
+                        details += `Machine Model: ${machineModels[i]}\n`;
+                    }
+
+                    if (serials[i]) {
+                        details += `Serial No: ${serials[i]}\n`;
+                    }
+
+                    if (unitTypes[i]) {
+                        details += `Unit Type: ${unitTypes[i]}\n`;
+                    }
+
+                    if (mrStarts[i]) {
+                        details += `MR Start: ${mrStarts[i]}\n`;
+                    }
+
+                    if (colorImps[i]) {
+                        details += `Color Impression: ${colorImps[i]}\n`;
+                    }
+
+                    if (blackImps[i]) {
+                        details += `Black Impression: ${blackImps[i]}\n`;
+                    }
+
+                    if (colorLargeImps[i]) {
+                        details += `Color Large Impression: ${colorLargeImps[i]}\n\n`;
+                    }
+                }
+
+                details += `Pull-out Machine Details: \n\n`;
+
+                for (let j = pulloutStart; j <= mrEnds.length + 2; j++) {
+                    if (machineModels[j]) {
+                        details += `Machine Model: ${machineModels[j]}\n`;
+                    }
+                    if (serials[j]) {
+                        details += `Serial No: ${serials[j]}\n`;
+                    }
+                    if (mrEnds[j]) {
+                        details += `MR End: ${mrEnds[j]}\n`;
+                    }
+                    if (colorImps[j]) {
+                        details += `Color Impression: ${colorImps[j]}\n`;
+                    }
+
+                    if (blackImps[j]) {
+                        details += `Black Impression: ${blackImps[j]}\n`;
+                    }
+
+                    if (colorLargeImps[j]) {
+                        details += `Color Large Impression: ${colorLargeImps[j]}\n\n`;
+                    }
+                }
             }
 
             const modal = document.createElement('div');
