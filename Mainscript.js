@@ -218,7 +218,7 @@ function initializeTable() {
         const cells = row.querySelectorAll('td');
         
         // Skip empty rows or rows with insufficient cells
-        if (cells.length === 0 || cells.length < 9) return null;
+        if (cells.length === 0 || cells.length < 10) return null;
         
         // Get ID from data attribute on btn-view
         const viewButton = row.querySelector('.btn-view');
@@ -227,7 +227,7 @@ function initializeTable() {
         if (!invoiceId) return null;
         
         // Store reference to each cell for faster access
-        const cellTexts = Array.from(cells).slice(0, 8).map(cell => cell.textContent.trim());
+        const cellTexts = Array.from(cells).slice(0, 9).map(cell => cell.textContent.trim());
         
         return {
             id: invoiceId,
@@ -240,6 +240,7 @@ function initializeTable() {
             terms: cellTexts[5],
             particulars: cellTexts[6],
             si_date: cellTexts[7],
+            type: cellTexts[8],
             rowElement: row,
             searchableText: cellTexts.join(' ').toLowerCase(),
             actionContainer: row.querySelector('.action-buttons')

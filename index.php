@@ -163,44 +163,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         if (isset($_POST['bnew_unit_type']) && is_array($_POST['bnew_unit_type'])) {
 
                             // Inserting to the history table
-                            $stmntHistory = $conn->prepare("INSERT INTO historyv2 (si_number, dr_number, delivered_to, tin, address, terms, particulars, si_date, type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'UPDATED')");
-                            $stmntHistory->bind_param(
-                                "sssssssss",
-                                $_POST['si_number'],
-                                $_POST['dr_number'],
-                                $_POST['delivered_to'],
-                                $_POST['tin'],
-                                $_POST['address'],
-                                $_POST['terms'],
-                                $_POST['particulars'],
-                                $_POST['si_date'],
-                                $current_type
-                            );
+                            $stmntHistory = $conn->prepare("INSERT INTO historyv2 (si_number, dr_number, delivered_to, tin, address, terms, particulars, si_date, unit_type, machine_model, serial_no, type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'bnew', 'UPDATED')");
 
-                            $stmntHistory->execute();
-                            $stmntHistory->close();
+                            $historyModel = [];
+                            $historySerial = [];
+                            $historyUnitType = [];
 
                             for ($i = 0; $i < count($_POST['bnew_unit_type']); $i++) {
                                 if (!empty($_POST['bnew_unit_type'][$i])) {
                                     $stmt_bnew = $conn->prepare("INSERT INTO bnew_machine (dr_number, unit_type, machine_model, serial_no) VALUES (?, ?, ?, ?)");
 
-                                    $stmntHistoryPart2 = $conn->prepare("
-                                    UPDATE historyv2 
-                                    SET unit_type = ?,
-                                    machine_model = ?,
-                                    serial_no = ?
-                                    WHERE dr_number = ?");
-
-                                    $stmntHistoryPart2->bind_param(
-                                        "ssss",
-                                        $_POST['bnew_unit_type'][$i],
-                                        $_POST['bnew_machine_model'][$i],
-                                        $_POST['bnew_serial_no'][$i],
-                                        $dr_number
-                                    );
-
-                                    $stmntHistoryPart2->execute();
-                                    $stmntHistoryPart2->close();
+                                    $historyModel[] = isset($_POST['bnew_machine_model'][$i]) ? $_POST['bnew_machine_model'][$i] : '';
+                                    $historySerial[] = isset($_POST['bnew_serial_no'][$i]) ? $_POST['bnew_serial_no'][$i] : '';
+                                    $historyUnitType[] = isset($_POST['bnew_unit_type'][$i]) ? $_POST['bnew_unit_type'][$i] : '';
 
                                     $stmt_bnew->bind_param(
                                         "ssss",
@@ -213,12 +188,48 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     $stmt_bnew->close();
                                 }
                             }
+
+                            // Execute history insert ONCE with comma-separated values
+                            if (!empty($historyUnitType)) {
+                                $unitTypesStr = implode(', ', $historyUnitType);
+                                $modelsStr = implode(', ', $historyModel);
+                                $serialsStr = implode(', ', $historySerial);
+
+                                $stmntHistory->bind_param(
+                                    "sssssssssss", // 11 string parameters (12 total including the 2 hardcoded values)
+                                    $_POST['si_number'],
+                                    $dr_number,
+                                    $_POST['delivered_to'],
+                                    $_POST['tin'],
+                                    $_POST['address'],
+                                    $_POST['terms'],
+                                    $_POST['particulars'],
+                                    $_POST['si_date'],
+                                    $unitTypesStr,
+                                    $modelsStr,
+                                    $serialsStr
+                                );
+                                $stmntHistory->execute();
+                                $stmntHistory->close();
+                            }
                         }
                         break;
 
                     case 'usedmachine':
                         // Insert used_machine records
+                        // Insert used_machine records
                         if (isset($_POST['used_unit_type']) && is_array($_POST['used_unit_type'])) {
+
+                            $all_mr_starts = [];
+                            $all_machine_models = [];
+                            $all_unit_types = [];
+                            $all_color_imps = [];
+                            $all_serial_nos = [];
+                            $all_black_imps = [];
+                            $all_color_large_imps = [];
+
+                            $stmtHistoryv2 = $conn->prepare("INSERT INTO historyv2 (si_number, dr_number, delivered_to, tin, address, terms, particulars, si_date, unit_type, machine_model, serial_no, mr_start, color_impression, black_impression, color_large_impression, type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'usedmachine', 'UPDATE')");
+
                             for ($i = 0; $i < count($_POST['used_unit_type']); $i++) {
                                 if (!empty($_POST['used_unit_type'][$i])) {
                                     // Clean numeric fields using helper function
@@ -226,6 +237,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     $color_imp = cleanNumeric($_POST['used_color_imp'][$i] ?? '0');
                                     $black_imp = cleanNumeric($_POST['used_black_imp'][$i] ?? '0');
                                     $color_large_imp = cleanNumeric($_POST['used_color_large_imp'][$i] ?? '0');
+
+                                    // FIXED: Use the specific index values, not the whole arrays
+                                    $all_unit_types[] = $_POST['used_unit_type'][$i] ?? "";
+                                    $all_machine_models[] = $_POST['used_machine_model'][$i] ?? "";
+                                    $all_serial_nos[] = $_POST['used_serial_no'][$i] ?? "";
+                                    $all_mr_starts[] = $_POST['used_mr_start'][$i] ?? "";
+                                    $all_color_imps[] = str_replace(',', '', $_POST['used_color_imp'][$i]) ?? "";
+                                    $all_black_imps[] = str_replace(',', '', $_POST['used_black_imp'][$i]) ?? "";
+                                    $all_color_large_imps[] = str_replace(',', '', $_POST['used_color_large_imp'][$i]) ?? "";
 
                                     $stmt_used = $conn->prepare("INSERT INTO used_machine (dr_number, unit_type, machine_model, serial_no, mr_start, color_impression, black_impression, color_large_impression) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_used->bind_param(
@@ -243,15 +263,67 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     $stmt_used->close();
                                 }
                             }
+
+                            if (!empty($all_serial_nos)) {
+                                // Create comma-separated strings FIRST (as variables)
+                                $unit_types_str = implode(', ', $all_unit_types);
+                                $machine_models_str = implode(', ', $all_machine_models);
+                                $serial_nos_str = implode(', ', $all_serial_nos);
+                                $mr_starts_str = implode(', ', $all_mr_starts);
+                                $color_imps_str = implode(', ', $all_color_imps);
+                                $black_imps_str = implode(', ', $all_black_imps);
+                                $color_large_imps_str = implode(', ', $all_color_large_imps);
+
+                                // FIXED: Pass variables, not function calls directly
+                                $stmtHistoryv2->bind_param(
+                                    "sssssssssssssss", // 15 string parameters
+                                    $_POST['si_number'],
+                                    $dr_number,
+                                    $_POST['delivered_to'],
+                                    $_POST['tin'],
+                                    $_POST['address'],
+                                    $_POST['terms'],
+                                    $_POST['particulars'],
+                                    $_POST['si_date'],
+                                    $unit_types_str,
+                                    $machine_models_str,
+                                    $serial_nos_str,
+                                    $mr_starts_str,
+                                    $color_imps_str,
+                                    $black_imps_str,
+                                    $color_large_imps_str
+                                );
+
+                                $stmtHistoryv2->execute();
+                                $stmtHistoryv2->close();
+                            }
                         }
                         break;
 
                     case 'drinvoice':
                         // Insert dr_invoice records
+                        $unit_types_for_history = [];
+                        $machines_for_history = [];
+                        $quantities_for_history = [];
+                        $item_descs_for_history = [];
+                        $under_po_nos_for_history = [];
+                        $under_invoice_nos_for_history = [];
+                        $notes_for_history = [];
+                        $delivery_type_history = [];
+
                         if (isset($_POST['invoice_quantity']) && is_array($_POST['invoice_quantity'])) {
                             for ($i = 0; $i < count($_POST['invoice_quantity']); $i++) {
                                 if (!empty($_POST['invoice_quantity'][$i])) {
                                     $quantity = str_replace(',', '', $_POST['invoice_quantity'][$i]);
+
+                                    $unit_types_for_history[] =  $_POST['invoice_unit_type'][$i];
+                                    $machines_for_history[] = $_POST['invoice_machine_model'][$i];
+                                    $quantities_for_history[] = $quantity;
+                                    $item_descs_for_history[] = $_POST['invoice_item_desc'][$i];
+                                    $under_po_nos_for_history[] = $_POST['invoice_under_po_no'][$i];
+                                    $under_invoice_nos_for_history[] = $_POST['invoice_under_invoice_no'][$i];
+                                    $notes_for_history[] = $_POST['invoice_note'][$i];
+                                    $delivery_type_history[] = $_POST['delivery_type'][$i];
 
                                     $stmt_invoice = $conn->prepare("INSERT INTO dr_invoice (dr_number, machine_model, under_po_no, under_invoice_no, note, delivery_type, quantity, unit_type, item_description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_invoice->bind_param(
@@ -270,12 +342,49 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     $stmt_invoice->close();
                                 }
                             }
+                            if (!empty($unit_types_for_history)) {
+                                // History
+                                $stmtHistoryv2 = $conn->prepare("INSERT INTO historyv2 (si_number, dr_number, delivered_to, tin, address, terms, particulars, si_date, 
+                        unit_type, machine_model, quantity, item_description, under_po_no, under_invoice_no, note, delivery_type, type, status) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'drinvoice', 'UPDATED')");
+                                $stmtHistoryv2->bind_param(
+                                    "ssssssssssssssss",
+                                    $_POST['si_number'],
+                                    $dr_number,
+                                    $_POST['delivered_to'],
+                                    $_POST['tin'],
+                                    $_POST['address'],
+                                    $_POST['terms'],
+                                    $_POST['particulars'],
+                                    $_POST['si_date'],
+                                    implode(', ', $unit_types_for_history),
+                                    implode(', ', $machines_for_history),
+                                    implode(', ', $quantities_for_history),
+                                    implode(', ', $item_descs_for_history),
+                                    implode(', ', $under_po_nos_for_history),
+                                    implode(', ', $under_invoice_nos_for_history),
+                                    implode(', ', $notes_for_history),
+                                    implode(', ', $delivery_type_history)
+                                );
+
+                                $stmtHistoryv2->execute();
+                                $stmtHistoryv2->close();
+                            }
                         }
                         break;
 
                     case 'replacementmachine':
                         // Insert replacement_machine records
                         if (isset($_POST['replace_unit_type']) && is_array($_POST['replace_unit_type'])) {
+
+                            $history_unitType = [];
+                            $history_machineModel = [];
+                            $history_serialNo = [];
+                            $history_mrStart = [];
+                            $history_colorImps = [];
+                            $history_blackImps = [];
+                            $history_colorLargeImps = [];
+
                             for ($i = 0; $i < count($_POST['replace_unit_type']); $i++) {
                                 if (!empty($_POST['replace_unit_type'][$i])) {
                                     // Clean numeric fields using helper function
@@ -283,6 +392,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     $color_imp = cleanNumeric($_POST['replace_color_imp'][$i] ?? '0');
                                     $black_imp = cleanNumeric($_POST['replace_black_imp'][$i] ?? '0');
                                     $color_large_imp = cleanNumeric($_POST['replace_color_large_imp'][$i] ?? '0');
+
+                                    $history_unitType[] = $_POST['replace_unit_type'][$i];
+                                    $history_machineModel[] = $_POST['replace_machine_model'][$i];
+                                    $history_serilNo[] = $_POST['replace_serial_no'][$i];
+                                    $history_mrStart[] = $mr_start;
+                                    $history_colorImps[] = $color_imp;
+                                    $history_blackImps[] = $black_imp;
+                                    $history_colorLargeImps[] = $color_large_imp;
 
                                     $stmt_replace = $conn->prepare("INSERT INTO replacement_machine (dr_number, unit_type, machine_model, serial_no, mr_start, color_impression, black_impression, color_large_impression) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_replace->bind_param(
@@ -300,10 +417,44 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     $stmt_replace->close();
                                 }
                             }
+
+                            if (!empty($history_unitType)) {
+                                $stmtHistoryv2 = $conn->prepare("
+                                INSERT INTO historyv2
+                                (si_number, dr_number, delivered_to, tin, address, terms, particulars, si_date, 
+                                unit_type, machine_model, serial_no, mr_start, color_impression, black_impression, 
+                                color_large_impression, type, status) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'replacementmachine', 'UPDATED')");
+
+                                $stmtHistoryv2->bind_param(
+                                    "sssssssssssssss",
+                                    $_POST['si_number'],
+                                    $dr_number,
+                                    $_POST['delivered_to'],
+                                    $_POST['tin'],
+                                    $_POST['address'],
+                                    $_POST['terms'],
+                                    $_POST['particulars'],
+                                    $_POST['si_date'],
+                                    implode(', ', $history_unitType),
+                                    implode(', ', $history_machineModel),
+                                    implode(', ', $history_serialNo),
+                                    implode(', ', $history_mrStart),
+                                    implode(', ', $history_colorImps),
+                                    implode(', ', $history_blackImps),
+                                    implode(', ', $history_colorLargeImps)
+                                );
+                            }
                         }
                         break;
 
                     case 'drwithprice':
+                        $historyMachineModel = [];
+                        $historyQuantity = [];
+                        $historyPrice = [];
+                        $historyTotal = [];
+                        $historyUnitType = [];
+                        $historyItemDesc = [];
                         // Insert dr_with_price records
                         if (isset($_POST['price_quantity']) && is_array($_POST['price_quantity'])) {
                             for ($i = 0; $i < count($_POST['price_quantity']); $i++) {
@@ -312,9 +463,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     $price = str_replace(',', '', $_POST['price'][$i]);
                                     $total = $quantity * $price;
 
+
+                                    $historyMachineModel[] = $_POST['price_machine_model'][$i];
+                                    $historyQuantity[] = $quantity;
+                                    $historyPrice[] = $price;
+                                    $historyTotal[] = $total;
+                                    $historyUnitType[] = $_POST['price_unit_type'][$i];
+                                    $historyItemDesc[] = $_POST['price_item_desc'][$i];
+
+
                                     $stmt_price = $conn->prepare("INSERT INTO dr_with_price ( dr_number, machine_model, quantity, price, total, unit_type, item_description) VALUES (?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_price->bind_param(
-                                        "ssssssss",
+                                        "sssssss",
                                         $dr_number,
                                         $_POST['price_machine_model'][$i],
                                         $quantity,
@@ -327,16 +487,62 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     $stmt_price->close();
                                 }
                             }
+
+                            if (!empty($historyPrice)) {
+                                $stmtHistoryv2 = $conn->prepare("
+                                INSERT INTO historyv2
+                                (si_number, dr_number, delivered_to, tin, address, terms, particulars, si_date, machine_model, quantity, price, total, unit_type, item_description, type, status) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'drwithprice', 'UPDATED')");
+
+                                $stmtHistoryv2->bind_param(
+                                    "ssssssssssssss",
+                                    $_POST['si_number'],
+                                    $dr_number,
+                                    $_POST['delivered_to'],
+                                    $_POST['tin'],
+                                    $_POST['address'],
+                                    $_POST['terms'],
+                                    $_POST['particulars'],
+                                    $_POST['si_date'],
+                                    implode(', ', $historyMachineModel),
+                                    implode(', ', $historyQuantity),
+                                    implode(', ', $historyPrice),
+                                    implode(', ', $historyTotal),
+                                    implode(', ', $historyUnitType),
+                                    implode(', ', $historyItemDesc)
+                                );
+
+                                $stmtHistoryv2->execute();
+                                $stmtHistoryv2->close();
+                            }
                         }
                         break;
 
                     case 'useddr':
+                        $historyQuantity = [];
+                        $historyUnitType = [];
+                        $historyItemDesc = [];
+                        $historyMachineModel = [];
+                        $historySerialNo = [];
+                        $historyMrStart = [];
+                        $historyTechName = [];
+                        $historyPrNumber = [];
+
                         // Insert used_dr records
                         if (isset($_POST['useddr_quantity']) && is_array($_POST['useddr_quantity'])) {
                             for ($i = 0; $i < count($_POST['useddr_quantity']); $i++) {
                                 if (!empty($_POST['useddr_quantity'][$i])) {
                                     $quantity = str_replace(',', '', $_POST['useddr_quantity'][$i]);
                                     $mr_start = str_replace(',', '', $_POST['useddr_mr_start'][$i] ?? '0');
+
+                                    $historyMachineModel[] = $_POST['useddr_machine_model'][$i];
+                                    $historySerialNo[] = $_POST['useddr_serial_no'][$i];
+                                    $historyMrStart[] = $mr_start;
+                                    $historyTechName[] = $_POST['useddr_technician_name'][$i];
+                                    $historyPrNumber[] = $_POST['useddr_pr_number'][$i];
+                                    $historyQuantity[] = $quantity;
+                                    $historyUnitType[] = $_POST['useddr_unit_type'][$i];
+                                    $historyItemDesc[] = $_POST['useddr_item_desc'][$i];
 
                                     $stmt_useddr = $conn->prepare("INSERT INTO used_dr (dr_number, machine_model, serial_no, mr_start, technician_name, pr_number, quantity, unit_type, item_description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_useddr->bind_param(
@@ -356,9 +562,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 }
                             }
                         }
+
+                        if (!empty($historyQuantity)) {
+                            //For the History Table
+                            $stmtHistoryv2 = $conn->prepare("INSERT INTO historyv2 (si_number, dr_number, delivered_to, tin, address, terms, particulars, si_date, quantity, unit_type, item_description, machine_model, serial_no, mr_start, technician_name, pr_number, type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'useddr', 'UPDATED')");
+                            $stmtHistoryv2->bind_param(
+                                "ssssssssssssssss",
+                                $si_number,
+                                $dr_number,
+                                $_POST['delivered_to'],
+                                $_POST['tin'],
+                                $_POST['address'],
+                                $_POST['terms'],
+                                $_POST['particulars'],
+                                $_POST['si_date'],
+                                implode(', ', $historyQuantity),
+                                implode(', ', $historyUnitType),
+                                implode(', ', $historyItemDesc),
+                                implode(', ', $historyMachineModel),
+                                implode(', ', $historySerialNo),
+                                implode(', ', $historyMrStart),
+                                implode(', ', $historyTechName),
+                                implode(', ', $historyPrNumber)
+                            );
+                            $stmtHistoryv2->execute();
+                            $stmtHistoryv2->close();
+                        }
                         break;
 
                     case 'pulloutmachine':
+                        // Arrays to store all values for this model group
+                        $historySerialNumbers = [];
+                        $historyMrEnd = [];
+                        $historyColorImps = [];
+                        $historyBlackImps = [];
+                        $historyColorLargeImps = [];
+                        $historyMachineModel = [];
+
                         // Insert pullout_machine records
                         if (isset($_POST['pullout_machine_model']) && is_array($_POST['pullout_machine_model'])) {
                             for ($i = 0; $i < count($_POST['pullout_machine_model']); $i++) {
@@ -369,9 +609,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     $black_imp = str_replace(',', '', $_POST['pullout_black_imp'][$i] ?? '0');
                                     $color_large_imp = str_replace(',', '', $_POST['pullout_color_large_imp'][$i] ?? '0');
 
+                                    $historySerialNumbers[] = $_POST['pullout_serial_no'][$i];
+                                    $historyMrEnd[] = $mr_end;
+                                    $historyColorImps[] = $color_imp;
+                                    $historyBlackImps[] = $black_imp;
+                                    $historyColorLargeImps[] = $color_large_imp;
+                                    $historyMachineModel[] = $_POST['pullout_machine_model'][$i];
+
                                     $stmt_pullout = $conn->prepare("INSERT INTO pullout_machine (dr_number, machine_model, serial_no, mr_end, color_impression, black_impression, color_large_impression) VALUES (?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_pullout->bind_param(
-                                        "ssssssss",
+                                        "sssssss",
                                         $dr_number,
                                         $_POST['pullout_machine_model'][$i],
                                         $_POST['pullout_serial_no'][$i],
@@ -385,18 +632,65 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 }
                             }
                         }
+
+                        if (!empty($historySerialNumbers)) {
+                            $stmtHistoryPullout = $conn->prepare("
+                            INSERT INTO historyv2
+                            (si_number, dr_number, delivered_to, tin, address, terms, particulars, si_date, machine_model, serial_no, mr_end, color_impression, black_impression, color_large_impression, type, status) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pulloutmachine', 'UPDATED')");
+
+                            $stmtHistoryPullout->bind_param(
+                                "ssssssssssssss",
+                                $_POST['si_number'],
+                                $dr_number,
+                                $_POST['delivered_to'],
+                                $_POST['tin'],
+                                $_POST['address'],
+                                $_POST['terms'],
+                                $_POST['particulars'],
+                                $_POST['si_date'],
+                                implode(', ', $historyMachineModel), // machine_model is not applicable for pulloutmachine
+                                implode(', ', $historySerialNumbers),
+                                implode(', ', $historyMrEnd),
+                                implode(', ', $historyColorImps),
+                                implode(', ', $historyBlackImps),
+                                implode(', ', $historyColorLargeImps)
+                            );
+                            $stmtHistoryPullout->execute();
+                            $stmtHistoryPullout->close();
+                        }
                         break;
 
                     case 'pulloutandreplacement':
+                        // Arrays to store all values for pulloutandreplacement machines History
+                        $historySerialNumbers = [];
+                        $historyMachineModels = [];
+                        $historyUnitType = [];
+                        $historyMrStart = [];
+                        $historyMrEnd = [];
+                        $historyColorImps = [];
+                        $historyBlackImps = [];
+                        $historyColorLargeImps = [];
+
                         // Insert pullout_machine records
                         if (isset($_POST['pullout_machine_model']) && is_array($_POST['pullout_machine_model'])) {
                             for ($i = 0; $i < count($_POST['pullout_machine_model']); $i++) {
+
+
                                 if (!empty($_POST['pullout_machine_model'][$i])) {
                                     // Clean numeric fields
                                     $mr_end = cleanNumeric($_POST['pullout_mr_end'][$i] ?? '0');
                                     $color_imp = cleanNumeric($_POST['pullout_color_imp'][$i] ?? '0');
                                     $black_imp = cleanNumeric($_POST['pullout_black_imp'][$i] ?? '0');
                                     $color_large_imp = cleanNumeric($_POST['pullout_color_large_imp'][$i] ?? '0');
+
+                                    // Store history values for pullout machines
+                                    $historySerialNumbers[] = $_POST['pullout_serial_no'][$i];
+                                    $historyMachineModels[] = $_POST['pullout_machine_model'][$i];
+                                    $historyMrEnd[] = $mr_end;
+                                    $historyColorImps[] = $color_imp;
+                                    $historyBlackImps[] = $black_imp;
+                                    $historyColorLargeImps[] = $color_large_imp;
 
                                     $stmt_pullout = $conn->prepare("INSERT INTO pullout_machine (dr_number, machine_model, serial_no, mr_end, color_impression, black_impression, color_large_impression) VALUES (?, ?, ?, ?, ?, ?, ?)");
                                     $stmt_pullout->bind_param(
@@ -424,9 +718,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     $color_imp = cleanNumeric($_POST['replace_color_imp'][$i] ?? '0');
                                     $black_imp = cleanNumeric($_POST['replace_black_imp'][$i] ?? '0');
                                     $color_large_imp = cleanNumeric($_POST['replace_color_large_imp'][$i] ?? '0');
-
                                     // Get unit_type from the form (should be included in pulloutandreplacement section)
                                     $unit_type = $_POST['replace_unit_type'][$i] ?? ''; // This might be empty - see HTML fix below
+
+                                    // Store history values for replacement machines
+                                    $historyMrStart[] = $mr_start;
+                                    $historyMachineModel[] = $_POST['replace_machine_model'][$i];
+                                    $historySerialNumbers[] = $_POST['replace_serial_no'][$i];
+                                    $historyUnitTypes[] = $unit_type;
+                                    $historyColorImps[] = $color_imp;
+                                    $historyBlackImps[] = $black_imp;
+                                    $historyColorLargeImps[] = $color_large_imp;
 
                                     // Use the correct parameter binding
                                     $stmt_replace = $conn->prepare("INSERT INTO replacement_machine (dr_number, unit_type, machine_model, serial_no, mr_start, color_impression, black_impression, color_large_impression) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
@@ -446,9 +748,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 }
                             }
                         }
+
+                        if (!empty($historyPulloutMachineModels) || !empty($historyReplaceMachineModels)) {
+                            // Prepare history data for insertion
+                            $stmtHistoryv2 = $conn->prepare("INSERT INTO historyv2 (si_number, dr_number, delivered_to, tin, address, terms, particulars, si_date, unit_type, machine_model, serial_no, mr_start, mr_end, color_impression, black_impression, color_large_impression, type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pulloutandreplacement', 'UPDATED')");
+
+                            $stmtHistoryv2->bind_param(
+                                "ssssssssssssssss",
+                                $si_number,
+                                $dr_number,
+                                $delivered_to,
+                                $tin,
+                                $address,
+                                $terms,
+                                $particulars,
+                                $si_date,
+                                $historyUnitTypes,
+                                $historyPulloutMachineModels,
+                                $historyPulloutSerialNumbers,
+                                implode(', ', $historyMrStart), // mr_start
+                                implode(', ', $historyMrEnd), // mr_end
+                                implode(', ', $historyColorImps), // color_impression
+                                implode(', ', $historyBlackImps), // black_impression
+                                implode(', ', $historyColorLargeImps), // color_large_impression
+                            );
+                            $stmtHistoryv2->execute();
+                            $stmtHistoryv2->close();
+                        }
                         break;
                 }
-
                 $conn->commit();
                 $success_message = "Invoice updated successfully!";
                 header("Location: " . $_SERVER['PHP_SELF'] . "?edit=" . $main_id);
@@ -458,15 +786,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $error_message = "Error updating invoice: " . $e->getMessage();
             }
         }
-    }
 
-    // Refresh to show updated data
-    // header("Location: " . $_SERVER['PHP_SELF']);
+        // Refresh to show updated data
+        // header("Location: " . $_SERVER['PHP_SELF']);
 
-    // Only redirect if NOT already viewing/editing
-    if (!isset($_GET['edit']) && !isset($_GET['view'])) {
-        header("Location: " . $_SERVER['PHP_SELF']);
-        exit();
+        // Only redirect if NOT already viewing/editing
+        if (!isset($_GET['edit']) && !isset($_GET['view'])) {
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit();
+        }
     }
 }
 
@@ -729,6 +1057,7 @@ $stmt_bnew->close();
                                 <th style="min-width: 151px !important;">Terms</th>
                                 <th>Particulars</th>
                                 <th style="min-width: 151px !important;">SI Date</th>
+                                <th style="min-width: 151px !important;">Type</th>
                                 <th style="position: sticky; right: 0; background: #f8fafc;">Actions</th>
                             </tr>
                         </thead>
@@ -744,6 +1073,7 @@ $stmt_bnew->close();
                                         <td><?php echo htmlspecialchars($row['terms']); ?></td>
                                         <td class="text-truncate"><?php echo htmlspecialchars($row['particulars']); ?></td>
                                         <td><?php echo date('M d, Y', strtotime($row['si_date'])); ?></td>
+                                        <td> <?php echo htmlspecialchars($row['type']); ?></td>
                                         <!-- In your table row -->
                                         <td class="action-cell">
                                             <div class="action-buttons">

@@ -708,7 +708,6 @@ $conn->close();
         }
 
         function viewDetails(activity) {
-
             // This function will display the details of the activity in an alert for simplicity.
             let details = `ID: ${activity.id}\n`;
             if (activity.type === 'bnew') {
@@ -724,9 +723,27 @@ $conn->close();
                 details += `Created At: ${activity.created_at}\n`;
                 details += `Particulars:${activity.particulars}\n\n`;
 
-                details += `Unit Type: ${activity.unit_type}\n`;
-                details += `Serials : ${activity.serial_no}\n`;
-                details += `Machine Model: ${activity.machine_model}\n`;
+                // Split comma-separated values and list them individually
+                const listify = (str) => (str || '').split(',').map(s => s.trim()).filter(Boolean);
+
+                const serials = listify(activity.serial_no);
+                const models = listify(activity.machine_model);
+                const units = listify(activity.unit_type);
+
+                const maxLength = Math.max(serials.length, models.length, units.length);
+
+                details += `Machine Detais: \n\n`;
+                for (let i = 0; i < maxLength; i++) {
+                    if (models[i]) {
+                        details += `Model: ${models[i]}\n`;
+                    }
+                    if (units[i]) {
+                        details += `Units: ${units[i]}\n`;
+                    }
+                    if (serials[i]) {
+                        details += `Serial: ${serials[i]}\n\n`;
+                    }
+                }
             } else if (activity.type === 'usedmachine') {
                 details += `SI Number: ${activity.si_number}\n`;
                 details += `DR Number: ${activity.dr_number}\n`;
@@ -1081,12 +1098,15 @@ $conn->close();
                 const prices = listify(activity.price);
                 const totals = listify(activity.total);
                 const descriptions = listify(activity.item_description);
+                const machineModel = listify(activity.machine_model);
 
-                const maxItems = Math.max(quantities.length, prices.length, totals.length, descriptions.length);
+                const maxItems = Math.max(quantities.length, prices.length, totals.length, descriptions.length, machineModel.length);
                 var totalAmount = 0;
 
-                details += `Machine Model: ${activity.machine_model}\n`;
                 for (let i = 0; i < maxItems; i++) {
+                    if (machineModel[i]) {
+                        details += `Machine Model: ${machineModel[i]}\n`;
+                    }
                     if (descriptions[i]) {
                         details += `Description: ${descriptions[i]}\n`;
                     }
@@ -1142,10 +1162,6 @@ $conn->close();
                     if (under_invoice[i]) {
                         details += `Under Invoice No: ${under_invoice[i]}\n`;
                     }
-                    if (notes[i]) {
-                        details += `Notes: ${notes[i]}\n\n`;
-                    }
-
 
                     if (itemdescriptions[i]) {
                         details += `Description: ${itemdescriptions[i]}\n`;
@@ -1155,6 +1171,9 @@ $conn->close();
                     }
                     if (deliveries[i]) {
                         details += `Delivered Type: ${deliveries[i]}\n`;
+                    }
+                    if (notes[i]) {
+                        details += `Notes: ${notes[i]}\n\n`;
                     }
                 }
 
@@ -1221,8 +1240,16 @@ $conn->close();
                 const colorLargeImps = listify(activity.color_large_impression);
 
                 const maxSerials = Math.max(serials.length);
-                let replaceStart = 0;
-                let pulloutStart = 2;
+
+                // s
+
+                if (mrStarts.length > 1) {
+                    replaceStart = 0;
+                    pulloutStart = 2;
+                } else {
+                    replaceStart = 0;
+                    pulloutStart = 1;
+                }
 
                 details += `Replacement Machine Details: \n\n`;
 
@@ -1310,7 +1337,6 @@ $conn->close();
                     </div>
                 </div>
             `;
-
             document.body.appendChild(modal);
         }
 
